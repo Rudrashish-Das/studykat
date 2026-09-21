@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surface + ink tokens, mirrored from tailwind.config.ts so plain CSS
+       (the isometric room's material variables in Phase 5) can use them too. */
+    --sc-cream: #f6ead8;
+    --sc-paper: #fffaf2;
+    --sc-wood: #c99a6b;
+    --sc-sage: #a7b89b;
+    --sc-rose: #d9a5a0;
+    --sc-teal: #7fa8a4;
+    --sc-ink: #4a3b34;
+    --sc-ink-soft: #6b5a51;
+    --sc-ink-line: #d8c8b4;
+
+    /* Isometric constants — the room reads these in Phase 5. */
+    --sc-tile-w: 64px;
+    --sc-tile-h: 32px;
+
+    /* Motion. Every transition in the app routes through these. */
+    --sc-dur: 280ms;
+    --sc-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-cream font-sans text-ink antialiased;
+    margin: 0;
+    /* A soft warm vignette so full-bleed screens never feel flat. */
+    background-image:
+      radial-gradient(120% 80% at 50% -10%, #fdf9f2 0%, rgba(253, 249, 242, 0) 60%),
+      radial-gradient(90% 60% at 100% 100%, rgba(167, 184, 155, 0.22) 0%, rgba(167, 184, 155, 0) 70%);
+    background-attachment: fixed;
+  }
+
+  /* Visible, on-palette focus ring for keyboard users (see §9). */
+  :focus-visible {
+    outline: 3px solid theme('colors.teal.dark');
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-extrabold tracking-tight;
+    text-wrap: balance;
+  }
+}
+
+@layer utilities {
+  .sc-surface {
+    @apply rounded-cozy border border-ink-line/70 bg-paper shadow-cozy;
+  }
+}
+
+/* §9: honour reduced motion globally. Ambient loops stop; state changes stay
+   instant rather than animated. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
