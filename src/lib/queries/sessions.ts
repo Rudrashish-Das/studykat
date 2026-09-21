@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { requireSupabase } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/auth'
+import { useAuth, useUserId } from '@/lib/auth'
 import { useTimerStore } from '@/lib/timer'
-import type { EndSessionResult, StudySession, Subject, TodaySummary } from '@/lib/supabase/types'
+import type { StudySession, Subject, TodaySummary } from '@/lib/supabase/types'
 
 export const keys = {
   activeSession: (u: string) => ['active-session', u] as const,
@@ -35,7 +35,7 @@ export function useActiveSession() {
         .limit(1)
         .maybeSingle()
       if (error) throw error
-      return (data as StudySession | null) ?? null
+      return (data) ?? null
     },
   })
 }
@@ -53,7 +53,7 @@ export function useToday() {
     queryFn: async (): Promise<TodaySummary & { server_now: string }> => {
       const { data, error } = await requireSupabase().rpc('get_today')
       if (error) throw error
-      const summary = data as TodaySummary & { server_now: string }
+      const summary = data
       // Anchor the timer to the database clock rather than this device's.
       setServerNow(summary.server_now)
       return summary
@@ -91,7 +91,7 @@ export function useStartSession() {
         p_label: label ?? null,
       })
       if (error) throw error
-      return data as StudySession
+      return data
     },
   )
 }
@@ -105,7 +105,7 @@ export function useEndSession() {
         p_client_seconds: Math.round(clientSeconds),
       })
       if (error) throw error
-      return data as EndSessionResult
+      return data
     },
   )
 }
@@ -116,7 +116,7 @@ export function usePauseSession() {
       p_session_id: sessionId,
     })
     if (error) throw error
-    return data as StudySession
+    return data
   })
 }
 
@@ -126,7 +126,7 @@ export function useResumeSession() {
       p_session_id: sessionId,
     })
     if (error) throw error
-    return data as StudySession
+    return data
   })
 }
 
@@ -136,7 +136,7 @@ export function useAbandonSession() {
       p_session_id: sessionId,
     })
     if (error) throw error
-    return data as StudySession
+    return data
   })
 }
 
@@ -155,7 +155,7 @@ export function useRecentSessions(limit = 20) {
         .order('ended_at', { ascending: false })
         .limit(limit)
       if (error) throw error
-      return (data ?? []) as StudySession[]
+      return (data ?? [])
     },
   })
 }
@@ -175,24 +175,25 @@ export function useSubjects() {
         .eq('archived', false)
         .order('name')
       if (error) throw error
-      return (data ?? []) as Subject[]
+      return (data ?? [])
     },
   })
 }
 
 export function useCreateSubject() {
   const { user } = useAuth()
+  const requireUserId = useUserId()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (name: string): Promise<Subject> => {
       const { data, error } = await requireSupabase()
         .from('subjects')
-        .insert({ user_id: user!.id, name: name.trim() })
+        .insert({ user_id: requireUserId(), name: name.trim() })
         .select()
         .single()
       if (error) throw error
-      return data as Subject
+      return data
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: keys.subjects(user?.id ?? 'anonymous') })

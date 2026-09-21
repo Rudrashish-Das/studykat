@@ -1,4 +1,4 @@
-# StudyCat
+# StudyKat
 
 A cozy study timer. Run a session, earn coins for focused minutes, keep a daily
 streak, and spend the coins decorating an isometric room for a cat that is
@@ -36,9 +36,15 @@ signup, session, or purchase has been exercised end to end. See
 | `src/lib/iso/projection.test.ts` | Isometric projection, footprint collision, and depth sorting |
 | `src/lib/timer.test.ts` | Elapsed time derived from `started_at`, including pauses and slept tabs |
 
+`npm run lint` runs ESLint with type-aware rules — floating promises, hook
+dependencies, and `jsx-a11y` — and is gated in CI alongside typecheck, tests,
+and the build.
+
 `supabase/tests/` holds SQL assertions for the RPCs and row-level security,
-including the explicit "the client cannot write to `wallet`" negative test.
-Those need a database — see the README there.
+including the explicit "the client cannot write to `wallet`" negative test and
+regressions for every finding in [SECURITY.md](SECURITY.md). Those need a
+database — see the README there, and note that its fixtures must never be
+installed on a project with real accounts.
 
 ## Running locally
 
@@ -78,6 +84,8 @@ to `/` for a custom domain).
   The client never writes to `wallet`, `streaks`, or `inventory` directly.
 - **`localStorage` is never the source of truth** for anything earned. It caches
   UI preferences only.
+- A security audit of the schema, policies, auth flow and dependencies is
+  written up in [SECURITY.md](SECURITY.md), along with the accepted risks.
 - Palette, spacing, motion, and the isometric tile constants live in
   `tailwind.config.ts` and `src/index.css`. Components should not hand-roll
   colours.

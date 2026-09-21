@@ -15,20 +15,29 @@
 Everything runs in one transaction and rolls back, so it is safe to run more
 than once — including against a real project.
 
-## Against your Supabase project (no extra tooling)
+## Do not run these against your real project
 
-1. Open the project's **SQL Editor**.
-2. Run the migrations in `../migrations/` once, in filename order.
-3. Paste `00_shim.sql`… actually *skip* it — Supabase already provides the
-   `auth` schema, the `anon`/`authenticated` roles, and the default grants it
-   recreates. Run `01_helpers.sql`, then `rls_and_rpc.sql`.
+`01_helpers.sql` installs `SECURITY DEFINER` fixtures that the `authenticated`
+role must be able to call, because the tests run as that role in order to prove
+what row-level security blocks. While those fixtures exist, **any signed-in user
+can call `tst.set_coins()` and mint themselves unlimited currency.**
 
-The helpers in `01_helpers.sql` are `SECURITY DEFINER` fixtures for the test
-suite. Drop them when you are done:
+The file now refuses to install unless the session opts in *and* the database
+has almost no accounts, so pasting it into a live project's SQL editor fails
+closed. Use a throwaway database instead.
+
+If you ever do install them somewhere, tear them down afterwards:
 
 ```sql
 drop schema tst cascade;
 ```
+
+## Against a scratch Supabase project
+
+Create a second, empty Supabase project, run the migrations there, then run
+`01_helpers.sql` and `rls_and_rpc.sql`. You do not need `00_shim.sql` —
+Supabase already provides the `auth` schema, the `anon`/`authenticated` roles,
+and the default grants it recreates.
 
 ## Against a throwaway Postgres (needs Docker)
 

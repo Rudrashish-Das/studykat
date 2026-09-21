@@ -161,7 +161,7 @@ function Heatmap({ days }: { days: DailyTotal[] }) {
 function WeeklyBars({ days }: { days: DailyTotal[] }) {
   const weeks = useMemo(() => {
     const recent = days.slice(-84)
-    const buckets: Array<{ label: string; minutes: number }> = []
+    const buckets: { label: string; minutes: number }[] = []
     for (let i = 0; i < recent.length; i += 7) {
       const week = recent.slice(i, i + 7)
       const minutes = Math.round(week.reduce((sum, d) => sum + d.seconds, 0) / 60)

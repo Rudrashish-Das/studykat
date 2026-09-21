@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Room } from '@/components/room/Room'
 import { Hud } from '@/components/hud/Hud'
@@ -8,12 +8,13 @@ import { Notice } from '@/components/ui/Notice'
 import { useProfile } from '@/lib/queries/profile'
 import { usePlacedItems } from '@/lib/queries/room'
 import { useActiveSession, useStartSession, useToday } from '@/lib/queries/sessions'
-import { generateAppearance } from '@/lib/cat/appearance'
 import { poseForContext } from '@/lib/cat/pose'
 import { useCatWander } from '@/lib/cat/useCatWander'
 import { streakNudge, localHour } from '@/lib/economy/streak'
 import { paths } from '@/lib/paths'
 import { formatMinutes } from '@/lib/timer'
+import { nightnessFor } from '@/lib/daynight'
+import { useCatAppearance } from '@/lib/cat/useCatAppearance'
 
 export function Home() {
   const navigate = useNavigate()
@@ -32,10 +33,7 @@ export function Home() {
     if (activeSession.data) navigate(paths.focus, { replace: true })
   }, [activeSession.data, navigate])
 
-  const appearance = useMemo(
-    () => (profile ? generateAppearance(profile.cat_seed, profile.cat_variant) : null),
-    [profile?.cat_seed, profile?.cat_variant],
-  )
+  const appearance = useCatAppearance(profile)
 
   const pose = poseForContext({ now, timeZone, sessionActive: false })
   const catTile = useCatWander({
@@ -94,7 +92,7 @@ export function Home() {
 
       {startSession.isError && (
         <Notice tone="error" className="mt-5">
-          Could not start a session: {(startSession.error as Error).message}
+          Could not start a session: {(startSession.error).message}
         </Notice>
       )}
 
@@ -125,15 +123,4 @@ export function Home() {
       </p>
     </div>
   )
-}
-
-/**
- * How dark the room looks, from the local hour. Dusk comes on gradually from
- * 6pm and lifts again at 6am — a tint, never a blackout.
- */
-export function nightnessFor(hour: number): number {
-  if (hour >= 6 && hour < 17) return 0
-  if (hour >= 17 && hour < 20) return (hour - 17) / 3 // dusk
-  if (hour >= 20 || hour < 4) return 1
-  return Math.max(0, (6 - hour) / 2) // dawn
 }

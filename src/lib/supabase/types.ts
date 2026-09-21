@@ -32,7 +32,7 @@ export type UnlockRule =
 
 export type PauseInterval = { at: string; until: string | null }
 
-export interface Profile {
+export type Profile = {
   id: string
   display_name: string | null
   cat_name: string
@@ -41,11 +41,17 @@ export interface Profile {
   cat_variant: number
   daily_goal_minutes: number
   timezone: string
+  /**
+   * When the timezone was last changed. Set by a trigger and not writable by
+   * the client — it rate-limits a change that would otherwise move the day
+   * boundary the coin cap and streak are bucketed by.
+   */
+  timezone_changed_at: string | null
   onboarded_at: string | null
   created_at: string
 }
 
-export interface Subject {
+export type Subject = {
   id: string
   user_id: string
   name: string
@@ -54,7 +60,7 @@ export interface Subject {
   created_at: string
 }
 
-export interface StudySession {
+export type StudySession = {
   id: string
   user_id: string
   subject_id: string | null
@@ -69,13 +75,13 @@ export interface StudySession {
   label: string | null
 }
 
-export interface Wallet {
+export type Wallet = {
   user_id: string
   coins: number
   lifetime_coins: number
 }
 
-export interface Transaction {
+export type Transaction = {
   id: string
   user_id: string
   delta: number
@@ -84,7 +90,7 @@ export interface Transaction {
   created_at: string
 }
 
-export interface Streak {
+export type Streak = {
   user_id: string
   current_streak: number
   longest_streak: number
@@ -92,7 +98,7 @@ export interface Streak {
   freeze_tokens: number
 }
 
-export interface CatalogItem {
+export type CatalogItem = {
   id: string
   slug: string
   name: string
@@ -106,14 +112,14 @@ export interface CatalogItem {
   art_key: string
 }
 
-export interface InventoryRow {
+export type InventoryRow = {
   id: string
   user_id: string
   item_id: string
   acquired_at: string
 }
 
-export interface RoomLayoutRow {
+export type RoomLayoutRow = {
   id: string
   user_id: string
   item_id: string
@@ -124,7 +130,7 @@ export interface RoomLayoutRow {
 }
 
 /** Returned by the `end_session` RPC — the full, server-computed payoff. */
-export interface EndSessionResult {
+export type EndSessionResult = {
   session_id: string
   focused_seconds: number
   credited: boolean
@@ -142,7 +148,7 @@ export interface EndSessionResult {
 }
 
 /** Returned by `get_today` — everything the HUD needs in one round trip. */
-export interface TodaySummary {
+export type TodaySummary = {
   local_day: string
   minutes_today: number
   daily_goal_minutes: number

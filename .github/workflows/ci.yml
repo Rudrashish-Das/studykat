@@ -1,0 +1,47 @@
+name: CI
+
+# Pull requests and non-main branches get the same checks as a deploy, minus
+# the publish. Pushes to main are covered by the deploy workflow.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # The build is part of the gate: a type error the app config tolerates
+      # can still break the production bundle.
+      - name: Build
+        run: npm run build
+
+      # Fails only on a *known* vulnerability at high severity or above, so a
+      # transitive advisory in a dev dependency does not block a deploy.
+      - name: Audit dependencies
+        run: npm audit --audit-level=high --omit=dev

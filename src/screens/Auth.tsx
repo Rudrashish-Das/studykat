@@ -7,14 +7,8 @@ import { Notice } from '@/components/ui/Notice'
 import { paths } from '@/lib/paths'
 import { isSupabaseConfigured } from '@/lib/env'
 import { NotConfigured } from '@/screens/NotConfigured'
-import {
-  sendPasswordReset,
-  signInWithGoogle,
-  signInWithPassword,
-  signUpWithPassword,
-  updatePassword,
-  useAuth,
-} from '@/lib/auth'
+import { useAuth } from '@/lib/auth'
+import { sendPasswordReset, signInWithGoogle, signInWithPassword, signUpWithPassword, updatePassword } from '@/lib/auth-actions'
 
 export type AuthMode = 'login' | 'register' | 'reset' | 'new-password'
 
@@ -242,7 +236,7 @@ function AuthFrame({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center px-5 py-12">
       <Link to={paths.landing} className="mb-8 self-start text-sm font-bold text-ink-soft">
-        &larr; StudyCat
+        &larr; StudyKat
       </Link>
       <Card className="animate-fade-up">{children}</Card>
     </div>

@@ -11,7 +11,7 @@ export function NotConfigured() {
       <Card className="animate-fade-up">
         <h1 className="text-2xl">Almost there</h1>
         <p className="mt-3 text-ink-soft">
-          This copy of StudyCat has no Supabase project attached yet, so there is nothing to sign in
+          This copy of StudyKat has no Supabase project attached yet, so there is nothing to sign in
           to.
         </p>
         <ol className="mt-5 space-y-3 text-sm text-ink-soft">

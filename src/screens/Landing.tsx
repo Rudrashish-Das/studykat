@@ -22,7 +22,7 @@ export function Landing() {
     <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col justify-center px-5 py-12">
       <header className="mb-10 flex items-center justify-between">
         <span className="select-none text-xl font-extrabold tracking-tight">
-          Study<span className="text-wood-deep">Cat</span>
+          Study<span className="text-wood-deep">Kat</span>
         </span>
         <ButtonLink to={paths.login} variant="ghost">
           Log in

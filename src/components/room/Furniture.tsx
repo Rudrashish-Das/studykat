@@ -155,7 +155,7 @@ function WallPanel({
 
 /* ------------------------------------------------------------- the shapes */
 
-type ShapeProps = { w: number; h: number; mat: Material; material: string }
+interface ShapeProps { w: number; h: number; mat: Material; material: string }
 
 const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
   'box-low': ({ mat }) => <Box z={16} mat={mat} inset={0.15} />,

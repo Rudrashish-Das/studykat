@@ -29,9 +29,14 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run typecheck
+      - name: Lint
+        run: npm run lint
 
-      - run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
 
       - name: Build
         env:

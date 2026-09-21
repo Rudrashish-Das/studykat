@@ -8,13 +8,29 @@ import { FullScreenSpinner } from '@/components/ui/Spinner'
 import { Cat } from '@/components/cat/Cat'
 import { useProfile, useUpdateProfile } from '@/lib/queries/profile'
 import { generateAppearance, describeAppearance } from '@/lib/cat/appearance'
-import { signOut, useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/auth'
+import { signOut } from '@/lib/auth-actions'
 import { requireSupabase } from '@/lib/supabase/client'
 import { paths } from '@/lib/paths'
 import { streakThresholdMinutes } from '@/lib/economy/coins'
 
+/**
+ * The database rejects a few profile edits on purpose. Say why in a sentence
+ * rather than surfacing a Postgres error.
+ */
+function friendlyProfileError(raw: string, timezone: string): string {
+  const message = raw.toLowerCase()
+  if (message.includes('once a day')) {
+    return 'You already changed your timezone today. It can be changed again tomorrow — it decides when your day rolls over, so it is deliberately hard to flip back and forth.'
+  }
+  if (message.includes('timezone')) {
+    return `"${timezone}" is not a timezone we recognise. Use an IANA name like Europe/London.`
+  }
+  return raw
+}
+
 /** Sound is a UI preference, so localStorage is the right home for it. */
-const SOUND_KEY = 'studycat:sound'
+const SOUND_KEY = 'studykat:sound'
 
 function readSound(): boolean {
   try {
@@ -64,12 +80,7 @@ export function Settings() {
       })
       setSaved(true)
     } catch (err) {
-      const message = (err as Error).message
-      setError(
-        message.includes('timezone')
-          ? `"${timezone}" is not a timezone we recognise. Use an IANA name like Europe/London.`
-          : message,
-      )
+      setError(friendlyProfileError((err as Error).message, timezone))
     }
   }
 

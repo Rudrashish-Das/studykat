@@ -541,6 +541,129 @@ begin
     'get_daily_totals returned a negative total';
 end $$;
 
+-- ====================================================== hardening (0007) ==
+-- Regression tests for the security audit findings. See SECURITY.md.
+
+-- The internal rollup helpers took an arbitrary user id and were callable by
+-- any signed-in user, which leaked another account's study time.
+do $$
+declare v_blocked boolean;
+begin
+  v_blocked := false;
+  begin
+    perform public.credited_seconds_on('22222222-2222-2222-2222-222222222222', 'UTC', current_date);
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+  assert v_blocked, 'credited_seconds_on is still callable by the client';
+
+  v_blocked := false;
+  begin
+    perform public.session_coins_on('22222222-2222-2222-2222-222222222222', 'UTC', current_date);
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+  assert v_blocked, 'session_coins_on is still callable by the client';
+
+  v_blocked := false;
+  begin
+    perform public.goal_bonus_paid_on('22222222-2222-2222-2222-222222222222', 'UTC', current_date);
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+  assert v_blocked, 'goal_bonus_paid_on is still callable by the client';
+end $$;
+
+-- Revoking those must not have broken the functions that call them: a
+-- SECURITY DEFINER body runs as the definer, which still holds EXECUTE.
+do $$
+declare
+  v_user uuid := '11111111-1111-1111-1111-111111111111';
+  v_s    public.study_sessions;
+  v_r    jsonb;
+begin
+  perform tst.clear_sessions(v_user);
+  perform tst.set_streak(v_user, 0, null, 0, 0);
+  v_s := public.start_session(null, null);
+  perform tst.backdate_session(v_s.id, interval '40 minutes');
+  v_r := public.end_session(v_s.id, null);
+  assert (v_r ->> 'coins_awarded')::int > 0,
+    'end_session broke after revoking its internal helpers';
+  assert (public.get_today() ->> 'minutes_today')::int > 0,
+    'get_today broke after revoking its internal helpers';
+end $$;
+
+-- A trigger function has no business being RPC-callable.
+do $$
+declare v_blocked boolean := false;
+begin
+  begin
+    perform public.handle_new_user();
+  exception
+    when insufficient_privilege then v_blocked := true;
+    when others then v_blocked := false;
+  end;
+  assert v_blocked, 'handle_new_user is still callable by the client';
+end $$;
+
+-- Every SECURITY DEFINER function must pin a search_path, and must not leave
+-- pg_temp to be searched first.
+do $$
+declare r record;
+begin
+  for r in
+    select p.proname, p.proconfig
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.prosecdef
+  loop
+    assert r.proconfig is not null,
+      format('%s is SECURITY DEFINER with a mutable search_path', r.proname);
+    assert exists (
+      select 1 from unnest(r.proconfig) c
+       where c like 'search_path=%' and c like '%pg_temp%'
+    ), format('%s does not name pg_temp in its search_path', r.proname);
+  end loop;
+end $$;
+
+-- One owned item cannot be placed twice.
+do $$
+declare
+  v_user    uuid := '11111111-1111-1111-1111-111111111111';
+  v_owned   uuid;
+  v_blocked boolean := false;
+begin
+  select item_id into v_owned from public.inventory where user_id = v_user limit 1;
+  delete from public.room_layout where user_id = v_user and item_id = v_owned;
+  insert into public.room_layout (user_id, item_id, grid_x, grid_y) values (v_user, v_owned, 2, 2);
+  begin
+    insert into public.room_layout (user_id, item_id, grid_x, grid_y) values (v_user, v_owned, 5, 5);
+  exception when unique_violation then v_blocked := true;
+  end;
+  assert v_blocked, 'the same item could be placed twice';
+end $$;
+
+-- Timezone changes are rate-limited, because they move the boundary the daily
+-- coin cap and the streak are bucketed by: flipping it repeatedly could reset a
+-- capped day or credit one stretch of study to two days.
+--
+-- The fixture at the top of this file already moved this profile's timezone
+-- once, which started the clock, so the next change must be refused.
+do $$
+declare v_blocked boolean := false;
+begin
+  begin
+    update public.profiles set timezone = 'Europe/London'
+     where id = '11111111-1111-1111-1111-111111111111';
+  exception when check_violation then v_blocked := true;
+  end;
+  assert v_blocked, 'timezone could be changed twice within 24 hours';
+
+  -- And the rate-limit clock itself must not be clearable by the client.
+  update public.profiles set timezone_changed_at = null
+   where id = '11111111-1111-1111-1111-111111111111';
+  assert (select timezone_changed_at is not null from public.profiles
+           where id = '11111111-1111-1111-1111-111111111111'),
+    'the client could reset its own timezone rate-limit clock';
+end $$;
+
 rollback;
 
 \echo ''

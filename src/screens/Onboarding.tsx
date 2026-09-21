@@ -37,7 +37,7 @@ export function Onboarding() {
   // the cat is still permanently tied to the account.
   const candidates = useMemo(
     () => (profile ? candidateAppearances(profile.cat_seed) : null),
-    [profile?.cat_seed],
+    [profile],
   )
 
   const complete = useMutation({
@@ -49,7 +49,7 @@ export function Onboarding() {
         p_timezone: timezone,
       })
       if (rpcError) throw rpcError
-      return data as Profile
+      return data
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(profileKey(updated.id), updated)
@@ -63,7 +63,6 @@ export function Onboarding() {
   }
 
   const chosen = candidates[variant] ?? candidates[0]
-  const nameError = name.trim().length === 0 ? undefined : undefined
 
   return (
     <div className="mx-auto w-full max-w-3xl animate-fade-up px-5 py-10 sm:py-14">
@@ -112,7 +111,6 @@ export function Onboarding() {
           onChange={(e) => setName(e.target.value)}
           placeholder="Mochi"
           maxLength={24}
-          error={nameError}
           hint="You can change this later in Settings."
         />
 

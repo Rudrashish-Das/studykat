@@ -1,7 +1,7 @@
 import { rngForSeed } from './prng'
 
 /**
- * Every cat in StudyCat is this object, and this object is a pure function of
+ * Every cat in StudyKat is this object, and this object is a pure function of
  * (seed, variant). Nothing here reads the clock, the network, or a random
  * source — regenerate it a thousand times and it comes back identical.
  */

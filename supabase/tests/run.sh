@@ -3,7 +3,7 @@
 # container. Needs Docker; touches nothing outside the container.
 set -euo pipefail
 
-CONTAINER=studycat-pgtest
+CONTAINER=studykat-pgtest
 IMAGE=postgres:16-alpine
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -33,7 +33,10 @@ for file in $(docker exec "$CONTAINER" sh -c 'ls /sql/migrations/*.sql | sort');
 done
 
 echo "Installing test helpers..."
-run /sql/tests/01_helpers.sql
+# The helpers refuse to install without this opt-in. See the warning at the
+# top of 01_helpers.sql: they are only safe here because this container is
+# thrown away when the script exits.
+docker exec "$CONTAINER" psql -U postgres -v ON_ERROR_STOP=1 -q -c "set studykat.i_know_this_is_a_test_database = 'yes'; \i /sql/tests/01_helpers.sql"
 
 echo "Running assertions..."
 docker exec "$CONTAINER" psql -U postgres -v ON_ERROR_STOP=1 -f /sql/tests/rls_and_rpc.sql

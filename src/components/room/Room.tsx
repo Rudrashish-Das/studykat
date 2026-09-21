@@ -1,12 +1,8 @@
 import { useCallback, useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   GRID_SIZE,
-  ORIGIN_X,
-  ORIGIN_Y,
   ROOM_H,
   ROOM_W,
-  TILE_H,
-  TILE_W,
   depthOf,
   depthSort,
   diamondPoints,
@@ -92,7 +88,7 @@ export function Room({
 
   /** The cat is a drawable like any other, which is what makes it sort right. */
   const drawables = useMemo(() => {
-    const items: Array<Drawable & { kind: 'item' | 'cat'; placed?: PlacedItem }> = objects.map(
+    const items: (Drawable & { kind: 'item' | 'cat'; placed?: PlacedItem })[] = objects.map(
       (p) => ({
         id: p.id,
         kind: 'item' as const,
@@ -114,7 +110,8 @@ export function Room({
     return depthSort(items)
   }, [objects, catTile.gx, catTile.gy])
 
-  const pointerToTile = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+  const pointerToTile = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
     const stage = stageRef.current
     if (!stage) return null
     const rect = stage.getBoundingClientRect()
@@ -122,8 +119,12 @@ export function Room({
     const x = (event.clientX - rect.left) / ratio
     const y = (event.clientY - rect.top) / ratio
     const tile = toGrid(x, y)
-    return tile.gx >= 0 && tile.gy >= 0 && tile.gx < GRID_SIZE && tile.gy < GRID_SIZE ? tile : null
-  }, [])
+      return tile.gx >= 0 && tile.gy >= 0 && tile.gx < GRID_SIZE && tile.gy < GRID_SIZE
+        ? tile
+        : null
+    },
+    [stageRef],
+  )
 
   const handleMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -359,7 +360,7 @@ function Walls({
     { x: right.x, y: right.y - WALL_HEIGHT },
     { x: far.x, y: far.y - WALL_HEIGHT },
   ]
-  const pts = (p: Array<{ x: number; y: number }>) => p.map((q) => `${q.x},${q.y}`).join(' ')
+  const pts = (p: { x: number; y: number }[]) => p.map((q) => `${q.x},${q.y}`).join(' ')
 
   return (
     <g stroke={OUTLINE} strokeWidth="2" strokeLinejoin="round">
@@ -390,4 +391,3 @@ function Walls({
   )
 }
 
-export { TILE_W, TILE_H, ORIGIN_X, ORIGIN_Y }

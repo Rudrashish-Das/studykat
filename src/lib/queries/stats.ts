@@ -30,7 +30,7 @@ export function useDailyTotals(days = 365) {
     queryFn: async (): Promise<DailyTotal[]> => {
       const { data, error } = await requireSupabase().rpc('get_daily_totals', { p_days: days })
       if (error) throw error
-      return (data ?? []) as DailyTotal[]
+      return (data ?? [])
     },
   })
 }
@@ -44,7 +44,7 @@ export function useSubjectTotals() {
     queryFn: async (): Promise<SubjectTotal[]> => {
       const { data, error } = await requireSupabase().rpc('get_subject_totals')
       if (error) throw error
-      return (data ?? []) as SubjectTotal[]
+      return (data ?? [])
     },
   })
 }

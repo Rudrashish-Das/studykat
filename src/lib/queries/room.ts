@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { requireSupabase } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/auth'
+import { useAuth, useUserId } from '@/lib/auth'
 import { keys as sessionKeys } from './sessions'
 import type { CatalogItem, InventoryRow, RoomLayoutRow } from '@/lib/supabase/types'
 import type { PlacedItem } from '@/components/room/Room'
@@ -23,7 +23,7 @@ export function useCatalog() {
         .order('category')
         .order('sort_order')
       if (error) throw error
-      return (data ?? []) as CatalogItem[]
+      return (data ?? [])
     },
   })
 }
@@ -36,7 +36,7 @@ export function useInventory() {
     queryFn: async (): Promise<InventoryRow[]> => {
       const { data, error } = await requireSupabase().from('inventory').select('*')
       if (error) throw error
-      return (data ?? []) as InventoryRow[]
+      return (data ?? [])
     },
   })
 }
@@ -49,7 +49,7 @@ export function useRoomLayout() {
     queryFn: async (): Promise<RoomLayoutRow[]> => {
       const { data, error } = await requireSupabase().from('room_layout').select('*')
       if (error) throw error
-      return (data ?? []) as RoomLayoutRow[]
+      return (data ?? [])
     },
   })
 }
@@ -80,7 +80,7 @@ export function usePurchase() {
     mutationFn: async (itemId: string) => {
       const { data, error } = await requireSupabase().rpc('purchase_item', { p_item_id: itemId })
       if (error) throw error
-      return data as { item_id: string; spent: number; coins: number }
+      return data
     },
     onSuccess: () => {
       const id = user?.id ?? 'anonymous'
@@ -100,6 +100,7 @@ export function usePurchase() {
  */
 export function usePlaceItem() {
   const { user } = useAuth()
+  const requireUserId = useUserId()
   const queryClient = useQueryClient()
   const key = roomKeys.layout(user?.id ?? 'anonymous')
 
@@ -113,7 +114,7 @@ export function usePlaceItem() {
       const { data, error } = await requireSupabase()
         .from('room_layout')
         .insert({
-          user_id: user!.id,
+          user_id: requireUserId(),
           item_id: input.itemId,
           grid_x: input.gx,
           grid_y: input.gy,
@@ -122,7 +123,7 @@ export function usePlaceItem() {
         .select()
         .single()
       if (error) throw error
-      return data as RoomLayoutRow
+      return data
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: key }),
   })

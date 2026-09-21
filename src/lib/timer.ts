@@ -86,7 +86,7 @@ export function pausedMs(pauses: PauseInterval[], nowMs: number): number {
 
 export function isPaused(session: Pick<StudySession, 'pauses'>): boolean {
   const last = session.pauses[session.pauses.length - 1]
-  return last !== undefined && last.until === null
+  return last?.until === null
 }
 
 /**

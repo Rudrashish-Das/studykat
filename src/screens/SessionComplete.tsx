@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Card } from '@/components/ui/Card'
 import { ButtonLink } from '@/components/ui/Button'
 import { Cat } from '@/components/cat/Cat'
 import { CoinMark, StreakFlame } from '@/components/hud/Hud'
-import { generateAppearance } from '@/lib/cat/appearance'
+import { useCatAppearance } from '@/lib/cat/useCatAppearance'
 import { catReaction } from '@/lib/cat/pose'
 import { useProfile } from '@/lib/queries/profile'
 import { takeLastResult } from '@/lib/lastResult'
@@ -28,10 +28,7 @@ export function SessionComplete() {
     return () => window.clearTimeout(id)
   }, [])
 
-  const appearance = useMemo(
-    () => (profile ? generateAppearance(profile.cat_seed, profile.cat_variant) : null),
-    [profile?.cat_seed, profile?.cat_variant],
-  )
+  const appearance = useCatAppearance(profile)
 
   if (!result) return <Navigate to={paths.home} replace />
   if (!profile || !appearance) return null

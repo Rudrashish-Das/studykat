@@ -22,7 +22,7 @@ const sizes: Record<Size, string> = {
   lg: 'px-7 py-3.5 text-base',
 }
 
-type CommonProps = {
+interface CommonProps {
   variant?: Variant
   size?: Size
   className?: string

@@ -24,7 +24,7 @@ export function NavBar() {
     >
       <div className="mx-auto flex w-full max-w-5xl items-center gap-1 px-3 py-2 sm:gap-2 sm:px-5 sm:py-3">
         <span className="mr-auto hidden select-none text-lg font-extrabold tracking-tight sm:block">
-          Study<span className="text-wood-deep">Cat</span>
+          Study<span className="text-wood-deep">Kat</span>
         </span>
         {links.map((link) => (
           <NavLink

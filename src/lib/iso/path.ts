@@ -4,12 +4,12 @@ export const cellKey = (gx: number, gy: number) => `${gx},${gy}`
 
 /** Cells the cat cannot walk through. Rugs and wall decor do not block. */
 export function blockedCells(
-  items: Array<{
+  items: {
     grid_x: number
     grid_y: number
     rotation: number
     item: { footprint_w: number; footprint_h: number; layer: number; category: string }
-  }>,
+  }[],
 ): Set<string> {
   const blocked = new Set<string>()
   for (const placed of items) {

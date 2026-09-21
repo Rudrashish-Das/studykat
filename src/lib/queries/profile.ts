@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { requireSupabase } from '@/lib/supabase/client'
 import type { Profile } from '@/lib/supabase/types'
-import { useAuth } from '@/lib/auth'
+import { useAuth, useUserId } from '@/lib/auth'
 
 export const profileKey = (userId: string) => ['profile', userId] as const
 
@@ -19,7 +19,7 @@ export function useProfile() {
         .eq('id', userId!)
         .single()
       if (error) throw error
-      return data as Profile
+      return data
     },
   })
 }
@@ -32,7 +32,7 @@ export type ProfilePatch = Partial<
 >
 
 export function useUpdateProfile() {
-  const { user } = useAuth()
+  const requireUserId = useUserId()
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -40,11 +40,11 @@ export function useUpdateProfile() {
       const { data, error } = await requireSupabase()
         .from('profiles')
         .update(patch)
-        .eq('id', user!.id)
+        .eq('id', requireUserId())
         .select()
         .single()
       if (error) throw error
-      return data as Profile
+      return data
     },
     onSuccess: (profile) => {
       queryClient.setQueryData(profileKey(profile.id), profile)

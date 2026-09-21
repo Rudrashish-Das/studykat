@@ -54,7 +54,9 @@ describe('determinism', () => {
   it('pins the PRNG output, so a future refactor cannot silently rewrite every cat', () => {
     // If these numbers change, everyone's cat changes. That is a migration,
     // not a refactor.
-    expect(hashSeed('studycat')).toBe(2844870972)
+    // A deliberately neutral literal: a project rename must not be able to
+    // change this test's input, because that would quietly unpin the hash.
+    expect(hashSeed('prng-pin-do-not-change')).toBe(118794456)
     const rng = mulberry32(12345)
     const drawn = [rng.next(), rng.next(), rng.next()].map((n) => Number(n.toFixed(10)))
     expect(drawn).toEqual([0.9797282678, 0.3067522645, 0.4842054215])

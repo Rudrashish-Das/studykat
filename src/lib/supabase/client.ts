@@ -1,13 +1,14 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { supabaseConfig } from '@/lib/env'
+import type { Database } from './database'
 
 /**
  * `null` when the project has no Supabase credentials compiled in. Callers use
  * `requireSupabase()` at the point of use so the app can still render its
  * "not configured" state instead of crashing at module load.
  */
-export const supabase: SupabaseClient | null = supabaseConfig
-  ? createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+export const supabase: SupabaseClient<Database> | null = supabaseConfig
+  ? createClient<Database>(supabaseConfig.url, supabaseConfig.anonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -20,7 +21,7 @@ export const supabase: SupabaseClient | null = supabaseConfig
     })
   : null
 
-export function requireSupabase(): SupabaseClient {
+export function requireSupabase(): SupabaseClient<Database> {
   if (!supabase) {
     throw new Error(
       'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (see SETUP.md).',

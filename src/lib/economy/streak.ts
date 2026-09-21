@@ -25,7 +25,7 @@ export function localDay(at: Date, timeZone: string): LocalDay {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(at) as LocalDay
+  }).format(at)
 }
 
 /** The hour (0-23) it is for someone living in `timeZone`. */
@@ -53,7 +53,7 @@ export function daysBetween(from: LocalDay, to: LocalDay): number {
 
 export function addDays(day: LocalDay, delta: number): LocalDay {
   const ms = Date.parse(`${day}T00:00:00Z`) + delta * 86_400_000
-  return new Date(ms).toISOString().slice(0, 10) as LocalDay
+  return new Date(ms).toISOString().slice(0, 10)
 }
 
 export interface StreakState {

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Cat } from '@/components/cat/Cat'
 import { Button } from '@/components/ui/Button'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
 import { Notice } from '@/components/ui/Notice'
-import { generateAppearance } from '@/lib/cat/appearance'
+import { useCatAppearance } from '@/lib/cat/useCatAppearance'
 import { useProfile } from '@/lib/queries/profile'
 import {
   useAbandonSession,
@@ -46,10 +46,7 @@ export function Focus() {
   const paused = session.data ? isPaused(session.data) : false
   useTicker(Boolean(session.data) && !paused)
 
-  const appearance = useMemo(
-    () => (profile ? generateAppearance(profile.cat_seed, profile.cat_variant) : null),
-    [profile?.cat_seed, profile?.cat_variant],
-  )
+  const appearance = useCatAppearance(profile)
 
   // No session — someone navigated here directly, or it was just ended.
   useEffect(() => {
@@ -119,7 +116,7 @@ export function Focus() {
 
         {endSession.isError && (
           <Notice tone="error" className="mt-5">
-            Could not end the session: {(endSession.error as Error).message}
+            Could not end the session: {(endSession.error).message}
           </Notice>
         )}
 

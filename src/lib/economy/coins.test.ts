@@ -6,14 +6,14 @@ import { computeCoins, streakMultiplier, streakThresholdMinutes, COIN_RULES } fr
  * it is what actually pays out — and this file is the bug.
  */
 describe('coin formula', () => {
-  const cases: Array<{
+  const cases: {
     name: string
     seconds: number
     streak?: number
     coinsToday?: number
     goal?: boolean
     total: number
-  }> = [
+  }[] = [
     { name: '0 seconds', seconds: 0, total: 0 },
     { name: '4m59s is below the floor', seconds: 299, total: 0 },
     { name: '5m exactly clears the floor', seconds: 300, total: 5 },

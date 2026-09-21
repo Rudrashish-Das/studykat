@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Room } from '@/components/room/Room'
 import { Furniture } from '@/components/room/Furniture'
 import { Button } from '@/components/ui/Button'
@@ -13,7 +13,7 @@ import {
   usePlacedItems,
   useStoreItem,
 } from '@/lib/queries/room'
-import { generateAppearance } from '@/lib/cat/appearance'
+import { useCatAppearance } from '@/lib/cat/useCatAppearance'
 import { useCatWander } from '@/lib/cat/useCatWander'
 import { GRID_SIZE, canPlace, type Placement } from '@/lib/iso/projection'
 import { cn } from '@/lib/cn'
@@ -37,10 +37,7 @@ export function RoomEditor() {
   const [hoverTile, setHoverTile] = useState<{ gx: number; gy: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const appearance = useMemo(
-    () => (profile ? generateAppearance(profile.cat_seed, profile.cat_variant) : null),
-    [profile?.cat_seed, profile?.cat_variant],
-  )
+  const appearance = useCatAppearance(profile)
   const catTile = useCatWander({ placed, mode: 'still' })
 
   const selected = placed.find((p) => p.id === selectedId) ?? null
@@ -51,7 +48,7 @@ export function RoomEditor() {
     const byId = new Map((catalog.data ?? []).map((item) => [item.id, item]))
     return (inventory.data ?? [])
       .map((row) => byId.get(row.item_id))
-      .filter((item): item is CatalogItem => Boolean(item) && !placedIds.has(item!.id))
+      .filter((item): item is CatalogItem => item !== undefined && !placedIds.has(item.id))
   }, [placed, inventory.data, catalog.data])
 
   /** Existing footprints, for the collision check. */
@@ -70,25 +67,28 @@ export function RoomEditor() {
     [placed],
   )
 
-  function tryMove(gx: number, gy: number, rotation?: number) {
-    if (!selected) return
-    const candidate: Placement = {
-      id: selected.id,
-      gx,
-      gy,
-      w: selected.item.footprint_w,
-      h: selected.item.footprint_h,
-      rotation: rotation ?? selected.rotation,
-    }
-    // Room-wide surfaces have no position to speak of; skip the check.
-    const isSurface = ['floor', 'wall', 'wallcolor'].includes(selected.item.category)
-    if (!isSurface && !canPlace(candidate, placements, { ignoreId: selected.id })) {
-      setError('Something is already there.')
-      return
-    }
-    setError(null)
-    moveItem.mutate({ id: selected.id, gx, gy, rotation: candidate.rotation })
-  }
+  const tryMove = useCallback(
+    (gx: number, gy: number, rotation?: number) => {
+      if (!selected) return
+      const candidate: Placement = {
+        id: selected.id,
+        gx,
+        gy,
+        w: selected.item.footprint_w,
+        h: selected.item.footprint_h,
+        rotation: rotation ?? selected.rotation,
+      }
+      // Room-wide surfaces have no position to speak of; skip the check.
+      const isSurface = ['floor', 'wall', 'wallcolor'].includes(selected.item.category)
+      if (!isSurface && !canPlace(candidate, placements, { ignoreId: selected.id })) {
+        setError('Something is already there.')
+        return
+      }
+      setError(null)
+      moveItem.mutate({ id: selected.id, gx, gy, rotation: candidate.rotation })
+    },
+    [selected, placements, moveItem],
+  )
 
   // Keyboard placement.
   useEffect(() => {
@@ -120,7 +120,7 @@ export function RoomEditor() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selected, placements])
+  }, [selected, tryMove, storeItem])
 
   if (isPending || !profile || !appearance) {
     return <FullScreenSpinner label="Moving the furniture" />

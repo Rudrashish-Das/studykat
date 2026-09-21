@@ -7,7 +7,7 @@ here now so the deploy and the auth redirect URLs stay consistent.
 Throughout, replace:
 
 - `<user>` — your GitHub username
-- `<repo>` — the repository name (e.g. `studycat`)
+- `<repo>` — the repository name (e.g. `studykat`)
 - `<project-ref>` — your Supabase project ref, the subdomain in its API URL
   (this project's is `hkvshuugunmqlezbrrpc`)
 
@@ -150,10 +150,10 @@ step people most often get wrong.
 ### 3.1 Google Cloud Console
 
 1. Open <https://console.cloud.google.com> and create a project (e.g.
-   `studycat`).
+   `studykat`).
 2. **APIs & Services → OAuth consent screen**:
    - User type: **External**
-   - App name: `StudyCat`, plus your support and developer email
+   - App name: `StudyKat`, plus your support and developer email
    - Scopes: the defaults (`email`, `profile`, `openid`) are enough
    - Leave it in **Testing** and add your own Google account under **Test
      users**, unless you intend to publish it
