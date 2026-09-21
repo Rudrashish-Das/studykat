@@ -12,11 +12,33 @@ There is no server to run.
 | Phase | Scope | State |
 |---|---|---|
 | 1 | Skeleton: Vite + TS + Tailwind + router, design tokens, placeholder screens, CI deploy | **done** |
-| 2 | Auth: Supabase, email/password, Google OAuth, protected routes, `profiles` trigger | not started |
-| 3 | Timer and economy: schema, RLS, RPCs, server-anchored timer, coins, streaks | not started |
-| 4 | The cat: seeded generator, SVG component, poses, idle animations, onboarding picker | not started |
-| 5 | The room: isometric renderer, catalog, shop, purchases, editor, cat pathing | not started |
-| 6 | Stats, polish, accessibility pass, mobile pass | not started |
+| 2 | Auth: Supabase, email/password, Google OAuth, protected routes, `profiles` trigger | **code done**, needs the project set up (SETUP.md) |
+| 3 | Timer and economy: schema, RLS, RPCs, server-anchored timer, coins, streaks | **code done**, migrations not yet applied |
+| 4 | The cat: seeded generator, SVG component, poses, idle animations, onboarding picker | **done** |
+| 5 | The room: isometric renderer, catalog, shop, purchases, editor, cat pathing | **done** |
+| 6 | Stats, polish, accessibility pass, mobile pass | **done** |
+
+Everything through Phase 6 is written, typechecked, and building. What has
+**not** happened is a run against a live database: the migrations in
+`supabase/migrations/` have not been applied to a Supabase project yet, so no
+signup, session, or purchase has been exercised end to end. See
+[SETUP.md](SETUP.md) §2.3.
+
+## Tests
+
+`npm test` runs 149 unit tests covering the parts that must be right:
+
+| Area | What is pinned |
+|---|---|
+| `src/lib/economy/coins.test.ts` | The coin formula, case by case, including the daily cap and the sub-5-minute floor |
+| `src/lib/economy/streak.test.ts` | Day boundaries in real timezones, DST transitions in both directions, freeze tokens |
+| `src/lib/cat/appearance.test.ts` | The cat generator's determinism, and that the PRNG output never silently changes |
+| `src/lib/iso/projection.test.ts` | Isometric projection, footprint collision, and depth sorting |
+| `src/lib/timer.test.ts` | Elapsed time derived from `started_at`, including pauses and slept tabs |
+
+`supabase/tests/` holds SQL assertions for the RPCs and row-level security,
+including the explicit "the client cannot write to `wallet`" negative test.
+Those need a database — see the README there.
 
 ## Running locally
 

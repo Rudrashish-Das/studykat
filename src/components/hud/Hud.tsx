@@ -1,0 +1,153 @@
+import { flameTier } from '@/lib/economy/streak'
+import { formatMinutes } from '@/lib/timer'
+import { cn } from '@/lib/cn'
+
+/**
+ * The HUD. Three numbers, quietly: coins, streak, today against your goal.
+ * Everything here also has a non-numeric reading — the flame grows, the ring
+ * fills — because §8 asks for progress that is legible without reading.
+ */
+export function Hud({
+  coins,
+  streak,
+  minutesToday,
+  goalMinutes,
+  className,
+}: {
+  coins: number
+  streak: number
+  minutesToday: number
+  goalMinutes: number
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 rounded-pill border border-ink-line/70 bg-paper/90 px-3 py-2 shadow-cozy backdrop-blur sm:gap-4 sm:px-5',
+        className,
+      )}
+    >
+      <Coins amount={coins} />
+      <span aria-hidden className="h-6 w-px bg-ink-line" />
+      <StreakFlame days={streak} />
+      <span aria-hidden className="h-6 w-px bg-ink-line" />
+      <GoalRing minutes={minutesToday} goal={goalMinutes} />
+    </div>
+  )
+}
+
+export function Coins({ amount, className }: { amount: number; className?: string }) {
+  return (
+    <span className={cn('flex items-center gap-1.5', className)}>
+      <CoinMark />
+      <span className="text-sm font-extrabold tabular-nums" aria-label={`${amount} coins`}>
+        {amount.toLocaleString()}
+      </span>
+    </span>
+  )
+}
+
+export function CoinMark({ size = 18 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 20 20" width={size} height={size} aria-hidden className="shrink-0">
+      <circle cx="10" cy="10" r="8" fill="#e3b755" stroke="#4a3b34" strokeWidth="1.6" />
+      <circle cx="10" cy="10" r="4.6" fill="#f0cd7e" stroke="#4a3b34" strokeWidth="1.1" />
+    </svg>
+  )
+}
+
+/**
+ * The flame grows at 3 / 7 / 14 / 30 / 100 days — the same tiers as
+ * `flameTier`. A zero streak shows an unlit ember rather than nothing, so the
+ * HUD does not change shape the moment a streak starts.
+ */
+export function StreakFlame({ days, size = 22 }: { days: number; size?: number }) {
+  const tier = flameTier(days)
+  const lit = days > 0
+
+  // Each tier adds height and a brighter core.
+  const scale = [0.74, 0.86, 1, 1.12, 1.24, 1.38][tier] ?? 1
+  const outer = lit ? '#e08a4a' : '#c4b6a6'
+  const mid = lit ? '#f0b05e' : '#d6cabc'
+  const core = lit ? '#f7dc95' : '#e6ddd2'
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <svg
+        viewBox="0 0 24 28"
+        width={size}
+        height={size * 1.16}
+        aria-hidden
+        className="shrink-0 overflow-visible"
+        style={{ transform: `scale(${scale})`, transformOrigin: 'bottom center' }}
+      >
+        <path
+          d="M12 2 C 16 8 20 10 20 16 C 20 21.5 16.4 25 12 25 C 7.6 25 4 21.5 4 16 C 4 11 7 9 9 5 C 10 8 11 9 12 2 Z"
+          fill={outer}
+          stroke="#4a3b34"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M12 9 C 14.4 12.4 16 14 16 17 C 16 20 14.2 22 12 22 C 9.8 22 8 20 8 17 C 8 14.4 10 12.6 12 9 Z"
+          fill={mid}
+        />
+        {tier >= 3 && <ellipse cx="12" cy="18.5" rx="2.4" ry="3.2" fill={core} />}
+        {/* At the top tiers a couple of embers drift off it. */}
+        {tier >= 4 && (
+          <g fill={mid} opacity="0.85">
+            <circle cx="18" cy="7" r="1.5" />
+            <circle cx="6" cy="5" r="1.1" />
+          </g>
+        )}
+        {tier >= 5 && <circle cx="14" cy="1.5" r="1.3" fill={core} />}
+      </svg>
+      <span className="text-sm font-extrabold tabular-nums" aria-label={`${days} day streak`}>
+        {days}
+      </span>
+    </span>
+  )
+}
+
+/** Today against the goal, as a ring that fills. */
+export function GoalRing({
+  minutes,
+  goal,
+  size = 26,
+}: {
+  minutes: number
+  goal: number
+  size?: number
+}) {
+  const progress = goal > 0 ? Math.min(minutes / goal, 1) : 0
+  const radius = 10
+  const circumference = 2 * Math.PI * radius
+  const met = minutes >= goal
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <svg viewBox="0 0 26 26" width={size} height={size} aria-hidden className="shrink-0 -rotate-90">
+        <circle cx="13" cy="13" r={radius} fill="none" stroke="#e3d5bf" strokeWidth="4" />
+        <circle
+          cx="13"
+          cy="13"
+          r={radius}
+          fill="none"
+          stroke={met ? '#7f9472' : '#c99a6b'}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - progress)}
+          className="transition-[stroke-dashoffset] duration-700 ease-cozy"
+        />
+      </svg>
+      <span
+        className="text-sm font-extrabold tabular-nums"
+        aria-label={`${minutes} of ${goal} minutes studied today`}
+      >
+        {formatMinutes(minutes)}
+        <span className="font-bold text-ink-faint"> / {formatMinutes(goal)}</span>
+      </span>
+    </span>
+  )
+}

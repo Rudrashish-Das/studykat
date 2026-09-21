@@ -9,6 +9,7 @@ Throughout, replace:
 - `<user>` — your GitHub username
 - `<repo>` — the repository name (e.g. `studycat`)
 - `<project-ref>` — your Supabase project ref, the subdomain in its API URL
+  (this project's is `hkvshuugunmqlezbrrpc`)
 
 ---
 
@@ -40,6 +41,12 @@ Throughout, replace:
 ---
 
 ## 2. Supabase (needed from Phase 2)
+
+> **This project already has one.** The Supabase project is
+> `hkvshuugunmqlezbrrpc`, so its API URL is
+> `https://hkvshuugunmqlezbrrpc.supabase.co`. Sections 2.1 and 2.2 below are
+> written for creating a fresh project; if you are using the existing one, skip
+> to **2.3 Run the migrations**.
 
 ### 2.1 Create the project
 
@@ -73,7 +80,44 @@ variable**, once for `VITE_SUPABASE_URL` and once for `VITE_SUPABASE_ANON_KEY`.
 > data is row-level security plus `SECURITY DEFINER` functions, not secrecy of
 > this key.
 
-### 2.3 Auth URLs
+### 2.3 Run the migrations
+
+The schema, the row-level security policies, the economy functions, and the
+53-item catalog all live in `supabase/migrations/`. Apply them **in filename
+order**. Any of these works:
+
+**A. SQL Editor (no tooling).** Open the project's **SQL Editor**, then for each
+file from `0001_profiles.sql` through `0006_onboarding.sql`, paste the contents
+and run it. Each file is written to be safely re-runnable, so a repeat does no
+harm.
+
+**B. Supabase MCP server.** `.mcp.json` in this repo already points at the
+project. Authenticate it once:
+
+```bash
+claude /mcp
+```
+
+Pick `supabase`, choose **Authenticate**, and complete the browser flow. Run
+that in a real terminal — the desktop app cannot show the `/mcp` dialog. Once
+it connects, the migrations can be applied for you.
+
+**C. Supabase CLI.**
+
+```bash
+npx supabase link --project-ref hkvshuugunmqlezbrrpc
+npx supabase db push
+```
+
+Afterwards, confirm it took:
+
+```sql
+select count(*) from public.catalog_items;  -- expect 53
+```
+
+Then optionally run the assertions in `supabase/tests/` — see the README there.
+
+### 2.4 Auth URLs
 
 **Authentication → URL Configuration**:
 
@@ -89,7 +133,7 @@ session in the URL fragment, so the browser lands on a URL like
 `https://<user>.github.io/<repo>/#access_token=...`. The redirect allow-list has
 to tolerate anything after the base path.
 
-### 2.4 Email
+### 2.5 Email
 
 **Authentication → Providers → Email**: enable it, and leave **Confirm email**
 on. The built-in mailer is rate-limited on the free plan — that is fine for
@@ -121,7 +165,7 @@ step people most often get wrong.
    - **Authorized redirect URIs** — this one value, and nothing else:
 
      ```
-     https://<project-ref>.supabase.co/auth/v1/callback
+     https://hkvshuugunmqlezbrrpc.supabase.co/auth/v1/callback
      ```
 
      Google redirects to Supabase; Supabase then redirects to this site. Putting

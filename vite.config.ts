@@ -34,6 +34,16 @@ export default defineConfig(({ command, isPreview }) => ({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        // Split the two big third-party groups out of the app chunk so a
+        // change to a screen does not invalidate the whole download.
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          supabase: ['@supabase/supabase-js', '@tanstack/react-query'],
+        },
+      },
+    },
   },
   test: {
     globals: true,

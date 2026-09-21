@@ -76,3 +76,46 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* --------------------------------------------------------------- the cat --
+   Four idle loops, all CSS so they cost nothing per frame in React, and all
+   silenced by the prefers-reduced-motion block above. Each has a deliberately
+   odd period so they drift out of phase with each other and never look like a
+   single synchronised puppet. */
+
+@keyframes sc-breathe {
+  0%, 100% { transform: scaleY(1) scaleX(1); }
+  50%      { transform: scaleY(1.025) scaleX(0.995); }
+}
+.sc-cat-breathe      { animation: sc-breathe 4.3s ease-in-out infinite; }
+.sc-cat-breathe-slow { animation: sc-breathe 6.7s ease-in-out infinite; }
+
+@keyframes sc-tail-flick {
+  0%, 62%, 100% { transform: rotate(0deg); }
+  70%           { transform: rotate(-9deg); }
+  78%           { transform: rotate(5deg); }
+  86%           { transform: rotate(-3deg); }
+}
+.sc-cat-tail { animation: sc-tail-flick 7.1s cubic-bezier(0.22, 0.61, 0.36, 1) infinite; }
+
+/* Blink by squashing the eye group rather than swapping paths, so it works
+   whatever colour or shape the eyes are. */
+@keyframes sc-blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96%           { transform: scaleY(0.08); }
+}
+.sc-cat-blink { animation: sc-blink 5.9s ease-in-out infinite; }
+
+@keyframes sc-ear-twitch {
+  0%, 80%, 100% { transform: rotate(0deg); }
+  84%           { transform: rotate(-7deg); }
+  88%           { transform: rotate(3deg); }
+}
+.sc-cat-ear-left  { animation: sc-ear-twitch 9.3s ease-in-out infinite; }
+.sc-cat-ear-right { animation: sc-ear-twitch 11.7s ease-in-out infinite; }
+
+@keyframes sc-sparkle {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.8; }
+}
+.sc-cat-sparkle { animation: sc-sparkle 3.7s ease-in-out infinite; }
