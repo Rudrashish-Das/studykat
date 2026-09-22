@@ -65,15 +65,26 @@ export function useToday() {
 
 function useSessionMutation<TArgs, TResult>(
   fn: (supabaseArgs: TArgs) => Promise<TResult>,
-  options?: { invalidateToday?: boolean },
+  options?: {
+    invalidateToday?: boolean
+    /**
+     * The call returns the live session, so put it in the cache now. Only
+     * invalidating left the old answer there until the refetch landed: Focus
+     * opened, still saw no session, and sent the user back home.
+     */
+    returnsLiveSession?: boolean
+  },
 ) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => {
+    onSuccess: (result) => {
       const id = user?.id ?? 'anonymous'
+      if (options?.returnsLiveSession) {
+        queryClient.setQueryData(keys.activeSession(id), result)
+      }
       void queryClient.invalidateQueries({ queryKey: keys.activeSession(id) })
       if (options?.invalidateToday !== false) {
         void queryClient.invalidateQueries({ queryKey: keys.today(id) })
@@ -93,6 +104,7 @@ export function useStartSession() {
       if (error) throw error
       return data
     },
+    { returnsLiveSession: true },
   )
 }
 
@@ -117,7 +129,7 @@ export function usePauseSession() {
     })
     if (error) throw error
     return data
-  })
+  }, { returnsLiveSession: true })
 }
 
 export function useResumeSession() {
@@ -127,7 +139,7 @@ export function useResumeSession() {
     })
     if (error) throw error
     return data
-  })
+  }, { returnsLiveSession: true })
 }
 
 export function useAbandonSession() {

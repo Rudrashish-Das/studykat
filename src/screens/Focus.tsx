@@ -50,10 +50,13 @@ export function Focus() {
 
   const appearance = useCatAppearance(profile)
 
-  // No session — someone navigated here directly, or it was just ended.
+  // No session — someone navigated here directly, or it was just ended. Not
+  // while a refetch is still out, though: that answer may be about to change.
   useEffect(() => {
-    if (!session.isPending && !session.data) navigate(paths.home, { replace: true })
-  }, [session.isPending, session.data, navigate])
+    if (!session.isPending && !session.isFetching && !session.data) {
+      navigate(paths.home, { replace: true })
+    }
+  }, [session.isPending, session.isFetching, session.data, navigate])
 
   if (session.isPending || !session.data || !profile || !appearance) {
     return (

@@ -156,6 +156,9 @@ export function Home() {
                 className="w-full sm:w-auto lg:w-full"
                 disabled={startSession.isPending}
                 onClick={() => {
+                  // Fetch Focus mode's code while the session starts, so it is
+                  // ready to show rather than flashing a loading screen.
+                  void import('@/screens/Focus')
                   startSession.mutate(
                     { subjectId },
                     { onSuccess: () => navigate(paths.focus) },
