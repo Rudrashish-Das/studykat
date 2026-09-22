@@ -49,7 +49,8 @@ export function SubjectPicker({
   }
 
   return (
-    <fieldset className={className}>
+    // Fieldsets default to min-width: min-content, which would stop the chip row scrolling.
+    <fieldset className={cn('min-w-0', className)}>
       <legend className="text-sm font-bold">Studying</legend>
       {/* One swipeable row on phones so a long list does not stack up; wraps on wider screens. */}
       <div className="-mx-4 mt-2 flex items-center gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
