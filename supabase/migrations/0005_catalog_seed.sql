@@ -45,7 +45,7 @@ values
 
   -- ------------------------------------------------------------- furniture
   ('stool',            'Little stool',      'Holds one mug or one cat.',                   'furniture', 45,   null,                                      1, 1, 2, 'box-low/pine',         10),
-  ('crate',            'Wooden crate',      'Storage, seating, or a fort.',                'furniture', 55,   null,                                      1, 1, 2, 'box-low/oak',          20),
+  ('crate',            'Wooden crate',      'Storage, seating, or a fort.',                'furniture', 55,   null,                                      1, 1, 2, 'crate/oak',            20),
   ('side-table',       'Side table',        'For the things you put down.',                'furniture', 90,   null,                                      1, 1, 2, 'table/oak',            30),
   ('chair',            'Wooden chair',      'Upright, like your posture should be.',       'furniture', 120,  null,                                      1, 1, 2, 'chair/oak',            40),
   ('desk',             'Study desk',        'The whole reason we are here.',               'furniture', 180,  null,                                      2, 1, 2, 'desk/oak',             50),

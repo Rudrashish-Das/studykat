@@ -429,17 +429,105 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </>
   ),
 
-  desk: ({ w, h, mat }) => (
-    <>
-      <Box w={w} h={h} z={26} mat={mat} inset={0.5} />
-      <Box w={w} h={h} z={5} lift={26} mat={mat} inset={0.08} />
-      {/* An open book, so a desk reads as a desk and not a table. */}
-      <g transform={`translate(${w * HX * 0.5}, ${w * HY * 0.5 - 32})`}>
-        <polygon points="-12,0 0,-6 12,0 0,6" fill={mat.accent} />
-        <line x1="0" y1="-6" x2="0" y2="6" strokeWidth="1.2" />
+  crate: ({ mat }) => {
+    // Planked sides held by a batten at each end and a diagonal brace, and a
+    // planked lid. It shared `box-low` with the stool, and a plain box is only
+    // a crate if you are told so.
+    const lo = 0.16
+    const hi = 0.84
+    const Z = 28
+    const b = 0.1
+    const onLeft = (x: number, z: number) => iso(x, hi, z)
+    const onRight = (y: number, z: number) => iso(hi, y, z)
+    const face = (at: (u: number, z: number) => Pt, fill: string) => (
+      <g strokeWidth="1.2">
+        {/* Plank seams first, so the battens and brace lie over them. */}
+        {[Z / 3, (2 * Z) / 3].map((z) => (
+          <path key={z} d={`M${poly([at(lo + b, z), at(hi - b, z)])}`} fill="none" strokeWidth="1" opacity="0.45" />
+        ))}
+        <path d={rounded([at(lo + b, 4), at(lo + b + 0.1, 4), at(hi - b, Z - 4), at(hi - b - 0.1, Z - 4)], 1)} fill={fill} />
+        <path d={rounded([at(lo, 0), at(lo + b, 0), at(lo + b, Z), at(lo, Z)], 1.5)} fill={fill} />
+        <path d={rounded([at(hi - b, 0), at(hi, 0), at(hi, Z), at(hi - b, Z)], 1.5)} fill={fill} />
       </g>
-    </>
-  ),
+    )
+    return (
+      <>
+        <Slab x0={lo} x1={hi} y0={lo} y1={hi} z0={0} z1={Z} mat={mat} r={2.5} />
+        {face(onLeft, mat.left)}
+        {face(onRight, mat.right)}
+        {[0.39, 0.61].map((y) => (
+          <path key={y} d={`M${poly([iso(lo + 0.04, y, Z), iso(hi - 0.04, y, Z)])}`} fill="none" strokeWidth="1" opacity="0.45" />
+        ))}
+      </>
+    )
+  },
+
+  desk: ({ w, h, mat }) => {
+    // A top on two legs at one end and a drawer pedestal at the other, with a
+    // back panel between them and an open book and pencil cup on top. `P`
+    // follows the long side whichever way the desk is turned, and `d` = 1 is
+    // the front edge facing the viewer.
+    const long = Math.max(w, h)
+    const alongX = w >= h
+    const P = (a: number, d: number, z: number) => (alongX ? iso(a, d, z) : iso(d, a, z))
+    const at = (a0: number, a1: number, d0: number, d1: number) =>
+      alongX ? { x0: a0, x1: a1, y0: d0, y1: d1 } : { x0: d0, x1: d1, y0: a0, y1: a1 }
+    const quad = (pts: Pt[], fill: string, r = 1.5, sw = 1.2) => (
+      <path d={rounded(pts, r)} fill={fill} strokeWidth={sw} />
+    )
+    const LEG = 36
+    const TOP = LEG + 6
+    const ped0 = long - 0.66
+    const ped1 = long - 0.14
+    const front = 0.84
+    const frontFill = alongX ? mat.left : mat.right
+    const paper = MATERIALS.cream!
+    const cover = MATERIALS.teal!
+    const cup = P(long - 0.42, 0.36, TOP)
+    const drawer = (z0: number, z1: number) => {
+      const knob = P((ped0 + ped1) / 2, front, (z0 + z1) / 2)
+      return (
+        <g key={z0}>
+          {quad([P(ped0 + 0.05, front, z0), P(ped1 - 0.05, front, z0), P(ped1 - 0.05, front, z1), P(ped0 + 0.05, front, z1)], frontFill)}
+          <circle cx={knob.x} cy={knob.y} r="2.2" fill={mat.accent} strokeWidth="1.1" />
+        </g>
+      )
+    }
+    return (
+      <>
+        <Slab {...at(0.24, ped0, 0.16, 0.22)} z0={12} z1={LEG} mat={mat} r={1.5} />
+        <Slab {...at(0.14, 0.24, 0.16, 0.26)} z0={0} z1={LEG} mat={mat} r={1.5} />
+        <Slab {...at(0.14, 0.24, 0.74, 0.84)} z0={0} z1={LEG} mat={mat} r={1.5} />
+        <Slab {...at(ped0, ped1, 0.16, front)} z0={0} z1={LEG} mat={mat} r={2} />
+        {drawer(20, 33)}
+        {drawer(4, 17)}
+        <Slab {...at(0.06, long - 0.06, 0.08, 0.92)} z0={LEG} z1={TOP} mat={mat} r={2.5} />
+
+        {/* The open book: a cover, two pages lifted at the spine, a few lines. */}
+        {quad([P(0.5, 0.36, TOP), P(1.12, 0.36, TOP), P(1.12, 0.8, TOP), P(0.5, 0.8, TOP)], cover.left, 2)}
+        {quad([P(0.53, 0.39, TOP + 1), P(0.81, 0.38, TOP + 3), P(0.81, 0.76, TOP + 3), P(0.53, 0.77, TOP + 1)], paper.top, 1.5, 1.1)}
+        {quad([P(0.81, 0.38, TOP + 3), P(1.09, 0.39, TOP + 1), P(1.09, 0.77, TOP + 1), P(0.81, 0.76, TOP + 3)], paper.left, 1.5, 1.1)}
+        {[0.48, 0.56, 0.64].map((d) => (
+          <g key={d} strokeWidth="0.9" opacity="0.4" fill="none">
+            <path d={`M${poly([P(0.57, d, TOP + 1.5), P(0.77, d, TOP + 2.8)])}`} />
+            <path d={`M${poly([P(0.85, d, TOP + 2.8), P(1.05, d, TOP + 1.5)])}`} />
+          </g>
+        ))}
+
+        {/* A cup of pencils at the pedestal end. */}
+        <g transform={`translate(${cup.x}, ${cup.y})`}>
+          {/* The opening, then the pencils standing in it, then the front of the
+              cup over their ends — drawn the other way round they stood behind it. */}
+          <ellipse cx="0" cy="-11" rx="5" ry="2.2" fill={MATERIALS.sage!.right} strokeWidth="1.3" />
+          <path d="M-2 -9 L-4 -20 M0.5 -9 L1 -22 M2.5 -9 L6 -19" strokeWidth="2.6" />
+          <path d="M-2 -9 L-4 -20" stroke="#e4bf62" strokeWidth="1.4" />
+          <path d="M0.5 -9 L1 -22" stroke={MATERIALS.rose!.left} strokeWidth="1.4" />
+          <path d="M2.5 -9 L6 -19" stroke={MATERIALS.sage!.left} strokeWidth="1.4" />
+          <path d="M-5 -11 A5 2.2 0 0 0 5 -11 L5 -1 A5 2.2 0 0 1 -5 -1 Z" fill={MATERIALS.sage!.left} strokeWidth="1.3" />
+        </g>
+      </>
+    )
+  },
 
   armchair: ({ mat }) => (
     <>
