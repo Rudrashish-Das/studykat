@@ -87,9 +87,8 @@ The schema, the row-level security policies, the economy functions, and the
 order**. Any of these works:
 
 **A. SQL Editor (no tooling).** Open the project's **SQL Editor**, then for each
-file from `0001_profiles.sql` through `0006_onboarding.sql`, paste the contents
-and run it. Each file is written to be safely re-runnable, so a repeat does no
-harm.
+file in `supabase/migrations/`, in order, paste the contents and run it. Each
+file is written to be safely re-runnable, so a repeat does no harm.
 
 **B. Supabase MCP server.** `.mcp.json` in this repo already points at the
 project. Authenticate it once:
@@ -115,9 +114,23 @@ Afterwards, confirm it took:
 select count(*) from public.catalog_items;  -- expect 53
 ```
 
+### 2.4 When new migrations land
+
+`art_key` says which shape the renderer draws, so a migration that changes one
+only takes effect once it has run against the database — the site can deploy
+first and keep showing the old art. To check what the database currently
+believes:
+
+```sql
+select slug, art_key from public.catalog_items order by slug;
+```
+
+Anything still reading `plant-small/*`, `plant-tall/*`, or `tallbox/walnut` for
+the grandfather clock means `0008` and `0009` have not been applied yet.
+
 Then optionally run the assertions in `supabase/tests/` — see the README there.
 
-### 2.4 Auth URLs
+### 2.5 Auth URLs
 
 **Authentication → URL Configuration**:
 
@@ -139,7 +152,7 @@ session in the URL fragment, so the browser lands on a URL like
 `https://<user>.github.io/<repo>/#access_token=...`. The redirect allow-list has
 to tolerate anything after the base path.
 
-### 2.5 Email
+### 2.6 Email
 
 **Authentication → Sign In / Providers → Email**: enable it, and leave **Confirm email**
 on. The built-in mailer is rate-limited on the free plan — that is fine for
@@ -247,5 +260,5 @@ A custom domain serves the site from `/`, not from `/<repo>/`. Two consequences:
 `npm run build` asserts both (`scripts/check-dist-base.mjs`).
 
 To change the domain, edit `public/CNAME`, update the Pages setting, and add the
-new origin to Supabase's redirect list (§2.4). To drop it, delete the file — the
+new origin to Supabase's redirect list (§2.5). To drop it, delete the file — the
 build falls back to `/<repo>/` on its own.
