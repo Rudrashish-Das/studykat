@@ -6,7 +6,7 @@ import {
   isSurface,
   type SurfaceCategory,
 } from '@/components/room/surfaces'
-import { Furniture } from '@/components/room/Furniture'
+import { FurniturePreview } from '@/components/room/FurniturePreview'
 import { Button } from '@/components/ui/Button'
 import { Notice } from '@/components/ui/Notice'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
@@ -316,13 +316,12 @@ export function RoomEditor() {
                           }
                         }}
                       >
-                        <svg viewBox="-60 -80 120 110" className="h-16 w-full" aria-hidden>
-                          <Furniture
-                            artKey={item.art_key}
-                            footprintW={item.footprint_w}
-                            footprintH={item.footprint_h}
-                          />
-                        </svg>
+                        <FurniturePreview
+                          artKey={item.art_key}
+                          footprintW={item.footprint_w}
+                          footprintH={item.footprint_h}
+                          className="h-16 w-full"
+                        />
                         <span className="mt-1 block truncate text-xs font-bold">{item.name}</span>
                         <span className="block text-[11px] text-ink-faint">
                           {active ? (group.category === 'wallcolor' ? 'On — tap to remove' : 'In use') : 'Use this'}
@@ -367,13 +366,12 @@ export function RoomEditor() {
                     )
                   }}
                 >
-                  <svg viewBox="-60 -80 120 110" className="h-16 w-full" aria-hidden>
-                    <Furniture
-                      artKey={item.art_key}
-                      footprintW={item.footprint_w}
-                      footprintH={item.footprint_h}
-                    />
-                  </svg>
+                  <FurniturePreview
+                    artKey={item.art_key}
+                    footprintW={item.footprint_w}
+                    footprintH={item.footprint_h}
+                    className="h-16 w-full"
+                  />
                   <span className="mt-1 block truncate text-xs font-bold">{item.name}</span>
                 </button>
               </li>
