@@ -180,6 +180,19 @@ export function useSubjects() {
   })
 }
 
+// Muted enough to sit beside the room palette, distinct enough to tell apart
+// on the Stats bars. New subjects take the next one in turn.
+const SUBJECT_COLORS = [
+  '#a7b89b',
+  '#c49a6c',
+  '#8fb3b0',
+  '#d4a5a5',
+  '#b8a9c9',
+  '#d9b86a',
+  '#9bb0c9',
+  '#b5967f',
+]
+
 export function useCreateSubject() {
   const { user } = useAuth()
   const requireUserId = useUserId()
@@ -187,9 +200,11 @@ export function useCreateSubject() {
 
   return useMutation({
     mutationFn: async (name: string): Promise<Subject> => {
+      const existing = queryClient.getQueryData<Subject[]>(keys.subjects(user?.id ?? 'anonymous'))
+      const color = SUBJECT_COLORS[(existing?.length ?? 0) % SUBJECT_COLORS.length] ?? '#a7b89b'
       const { data, error } = await requireSupabase()
         .from('subjects')
-        .insert({ user_id: requireUserId(), name: name.trim() })
+        .insert({ user_id: requireUserId(), name: name.trim(), color })
         .select()
         .single()
       if (error) throw error

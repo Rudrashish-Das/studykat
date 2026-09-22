@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Room } from '@/components/room/Room'
 import { Hud } from '@/components/hud/Hud'
@@ -7,7 +7,8 @@ import { FullScreenSpinner } from '@/components/ui/Spinner'
 import { Notice } from '@/components/ui/Notice'
 import { useProfile } from '@/lib/queries/profile'
 import { usePlacedItems } from '@/lib/queries/room'
-import { useActiveSession, useStartSession, useToday } from '@/lib/queries/sessions'
+import { useActiveSession, useStartSession, useSubjects, useToday } from '@/lib/queries/sessions'
+import { SubjectPicker } from '@/components/session/SubjectPicker'
 import { poseForContext } from '@/lib/cat/pose'
 import { useCatWander } from '@/lib/cat/useCatWander'
 import { streakNudge, localHour } from '@/lib/economy/streak'
@@ -16,6 +17,16 @@ import { formatMinutes } from '@/lib/timer'
 import { nightnessFor } from '@/lib/daynight'
 import { useCatAppearance } from '@/lib/cat/useCatAppearance'
 
+const SUBJECT_KEY = 'studycat:last-subject'
+
+function readLastSubject(): string | null {
+  try {
+    return localStorage.getItem(SUBJECT_KEY)
+  } catch {
+    return null
+  }
+}
+
 export function Home() {
   const navigate = useNavigate()
   const { data: profile } = useProfile()
@@ -23,6 +34,21 @@ export function Home() {
   const activeSession = useActiveSession()
   const { placed, isPending: roomPending } = usePlacedItems()
   const startSession = useStartSession()
+  const subjects = useSubjects()
+  const [chosenSubject, setChosenSubject] = useState<string | null>(readLastSubject)
+  // The remembered subject may have been archived or deleted since.
+  const subjectId =
+    chosenSubject && subjects.data?.some((s) => s.id === chosenSubject) ? chosenSubject : null
+
+  function chooseSubject(id: string | null) {
+    setChosenSubject(id)
+    try {
+      if (id) localStorage.setItem(SUBJECT_KEY, id)
+      else localStorage.removeItem(SUBJECT_KEY)
+    } catch {
+      /* private mode; the choice simply will not persist */
+    }
+  }
 
   const timeZone = profile?.timezone ?? 'UTC'
   const now = new Date()
@@ -96,13 +122,15 @@ export function Home() {
         </Notice>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <SubjectPicker value={subjectId} onChange={chooseSubject} className="mt-6" />
+
+      <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button
           size="lg"
           disabled={startSession.isPending}
           onClick={() => {
             startSession.mutate(
-              {},
+              { subjectId },
               { onSuccess: () => navigate(paths.focus) },
             )
           }}

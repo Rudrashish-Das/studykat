@@ -12,6 +12,7 @@ import {
   useEndSession,
   usePauseSession,
   useResumeSession,
+  useSubjects,
   useToday,
 } from '@/lib/queries/sessions'
 import { COIN_RULES, computeCoins } from '@/lib/economy/coins'
@@ -33,6 +34,7 @@ export function Focus() {
   const { data: profile } = useProfile()
   const session = useActiveSession()
   const today = useToday()
+  const subjects = useSubjects()
   const reducedMotion = usePrefersReducedMotion()
 
   const endSession = useEndSession()
@@ -61,6 +63,8 @@ export function Focus() {
     )
   }
 
+  const subjectId = session.data.subject_id
+  const subject = subjects.data?.find((s) => s.id === subjectId)
   const seconds = focusedSeconds(session.data, now)
   const belowFloor = seconds < COIN_RULES.minSeconds
 
@@ -97,6 +101,16 @@ export function Focus() {
           {Math.floor(seconds / 60)} minutes focused
         </p>
 
+        {subject && (
+          <p className="mt-2 inline-flex items-center gap-2 text-sm font-bold text-moon/80">
+            <span
+              aria-hidden
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: subject.color }}
+            />
+            {subject.name}
+          </p>
+        )}
         {session.data.label && (
           <p className="mt-2 text-sm text-moon/70">{session.data.label}</p>
         )}
