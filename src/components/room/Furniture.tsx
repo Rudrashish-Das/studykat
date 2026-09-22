@@ -1,6 +1,6 @@
 import { memo, type ReactNode } from 'react'
 import { TILE_H, TILE_W, rotatedFootprint } from '@/lib/iso/projection'
-import { MATERIALS, OUTLINE, materialFor, parseArtKey, type Material } from './materials'
+import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey, type Material } from './materials'
 
 /**
  * Every piece of furniture in the game.
@@ -32,6 +32,40 @@ function footprintCorners(w: number, h: number): { t: Pt; r: Pt; b: Pt; l: Pt } 
 
 const poly = (pts: Pt[]) => pts.map((p) => `${p.x},${p.y}`).join(' ')
 
+/** Corner softening, in pixels. Big enough to read, small enough to keep the
+ *  isometric angles honest. */
+const CORNER = 3.5
+
+/** A point `d` along the line from `from` toward `to`, never past the middle. */
+function towards(from: Pt, to: Pt, d: number): Pt {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const len = Math.hypot(dx, dy) || 1
+  const step = Math.min(d, len / 2)
+  return { x: from.x + (dx / len) * step, y: from.y + (dy / len) * step }
+}
+
+/**
+ * The same closed shape as `poly`, but with its corners rounded off — every
+ * vertex becomes a short quadratic curve between the two edges that meet there.
+ *
+ * Squared-off corners on every face is what made the set read as blocks rather
+ * than furniture; §8 asks for soft edges, and one helper gives all 50-odd
+ * shapes the same softness without any of them knowing about it.
+ */
+function rounded(pts: Pt[], r: number = CORNER): string {
+  if (pts.length < 3) return `M${poly(pts).replace(/ /g, 'L')}`
+  const d: string[] = []
+  pts.forEach((cur, i) => {
+    const prev = pts[(i - 1 + pts.length) % pts.length]!
+    const next = pts[(i + 1) % pts.length]!
+    const from = towards(cur, prev, r)
+    const to = towards(cur, next, r)
+    d.push(`${i === 0 ? 'M' : 'L'}${from.x},${from.y}`, `Q${cur.x},${cur.y} ${to.x},${to.y}`)
+  })
+  return `${d.join(' ')} Z`
+}
+
 /**
  * An isometric box: one top face and two visible sides. `z` is its height in
  * pixels; `lift` raises the whole box off the floor (for things stacked on
@@ -44,6 +78,8 @@ function Box({
   lift = 0,
   mat,
   inset = 0,
+  insetW,
+  insetH,
   opacity,
 }: {
   w?: number
@@ -53,10 +89,17 @@ function Box({
   mat: Material
   /** Shrinks the footprint, for a tabletop narrower than its tile. */
   inset?: number
+  /**
+   * Shrink one axis more than the other. A single `inset` can only ever make a
+   * smaller square, so anything slab-shaped — a chair back, a headboard — comes
+   * out as a post without these.
+   */
+  insetW?: number
+  insetH?: number
   opacity?: number
 }) {
-  const scaleW = Math.max(0.05, w - inset)
-  const scaleH = Math.max(0.05, h - inset)
+  const scaleW = Math.max(0.05, w - (insetW ?? inset))
+  const scaleH = Math.max(0.05, h - (insetH ?? inset))
   const c = footprintCorners(scaleW, scaleH)
   // Centre the inset shape on the original footprint.
   const dx = ((w - scaleW) * HX - (h - scaleH) * HX) / 2
@@ -69,18 +112,18 @@ function Box({
   return (
     <g opacity={opacity}>
       {/* Left face — mid tone */}
-      <polygon
-        points={poly([shift(c.l, top), shift(c.b, top), shift(c.b, base), shift(c.l, base)])}
+      <path
+        d={rounded([shift(c.l, top), shift(c.b, top), shift(c.b, base), shift(c.l, base)])}
         fill={mat.left}
       />
       {/* Right face — darkest */}
-      <polygon
-        points={poly([shift(c.b, top), shift(c.r, top), shift(c.r, base), shift(c.b, base)])}
+      <path
+        d={rounded([shift(c.b, top), shift(c.r, top), shift(c.r, base), shift(c.b, base)])}
         fill={mat.right}
       />
       {/* Top face — lightest */}
-      <polygon
-        points={poly([shift(c.t, top), shift(c.r, top), shift(c.b, top), shift(c.l, top)])}
+      <path
+        d={rounded([shift(c.t, top), shift(c.r, top), shift(c.b, top), shift(c.l, top)])}
         fill={mat.top}
       />
     </g>
@@ -90,7 +133,7 @@ function Box({
 /** A flat shape lying on the floor: rugs and floor decals. */
 function FlatDiamond({ w, h, fill, opacity }: { w: number; h: number; fill: string; opacity?: number }) {
   const c = footprintCorners(w, h)
-  return <polygon points={poly([c.t, c.r, c.b, c.l])} fill={fill} opacity={opacity} />
+  return <path d={rounded([c.t, c.r, c.b, c.l], 6)} fill={fill} opacity={opacity} />
 }
 
 /** The soft contact shadow every object gets, per the recipe. */
@@ -136,10 +179,10 @@ function WallPanel({
   ]
   return (
     <g>
-      <polygon points={poly(pts)} fill={fill} />
+      <path d={rounded(pts)} fill={fill} />
       {accent && (
-        <polygon
-          points={poly([
+        <path
+          d={rounded([
             { x: pts[0]!.x + 5, y: pts[0]!.y + 5 },
             { x: pts[1]!.x - 5, y: pts[1]!.y + 5 },
             { x: pts[2]!.x - 5, y: pts[2]!.y - 5 },
@@ -153,7 +196,104 @@ function WallPanel({
   )
 }
 
+/**
+ * Two wall faces meeting at a corner, with skirting — the same construction
+ * `Walls` uses in the room, at swatch size.
+ */
+function WallSwatch({ left, right, skirting }: { left: string; right: string; skirting: string }) {
+  const H = 62
+  const c = footprintCorners(2, 2)
+  const up = (p: Pt, by: number): Pt => ({ x: p.x, y: p.y - by })
+
+  return (
+    <g>
+      <path d={rounded([c.t, c.l, up(c.l, H), up(c.t, H)])} fill={left} />
+      <path d={rounded([c.t, c.r, up(c.r, H), up(c.t, H)])} fill={right} />
+      <path d={rounded([c.t, c.l, up(c.l, 8), up(c.t, 8)], 2)} fill={skirting} strokeWidth="1" />
+      <path d={rounded([c.t, c.r, up(c.r, 8), up(c.t, 8)], 2)} fill={skirting} strokeWidth="1" />
+    </g>
+  )
+}
+
+/**
+ * Maps a point on a box's front face into world coordinates: `u` runs across
+ * the face from 0 to 1, `v` upward in pixels.
+ *
+ * "Front" is whichever of the two visible faces is wider, because that is the
+ * one a piece is built to show: a 1x2 bookcase is deep and narrow, so its books
+ * belong on the long right-hand face, not squeezed onto the short left one.
+ *
+ * Panelled fronts — shelves, wardrobe doors — are the whole difference between
+ * a carcass and a crate, and they all have to sit in that one plane.
+ */
+function frontFace(w: number, h: number, insetW: number, insetH: number) {
+  const scaleW = w - insetW
+  const scaleH = h - insetH
+  const dx = ((w - scaleW) * HX - (h - scaleH) * HX) / 2
+  const dy = ((w - scaleW) * HY + (h - scaleH) * HY) / 2
+
+  // Left face runs from the l corner along +x; right face from b toward r.
+  const wide = scaleW >= scaleH
+  const origin = wide
+    ? { x: -scaleH * HX + dx, y: scaleH * HY + dy }
+    : { x: (scaleW - scaleH) * HX + dx, y: (scaleW + scaleH) * HY + dy }
+  const step = wide
+    ? { x: scaleW * HX, y: scaleW * HY }
+    : { x: scaleH * HX, y: -scaleH * HY }
+
+  return (u: number, v: number): Pt => ({
+    x: origin.x + u * step.x,
+    y: origin.y + u * step.y - v,
+  })
+}
+
+/** A rounded quad on a face, given two corners in (u, v) face coordinates. */
+function facePanel(
+  f: (u: number, v: number) => Pt,
+  u0: number,
+  v0: number,
+  u1: number,
+  v1: number,
+  fill: string,
+  r = 2,
+  strokeWidth = 1.2,
+) {
+  return (
+    <path d={rounded([f(u0, v0), f(u1, v0), f(u1, v1), f(u0, v1)], r)} fill={fill} strokeWidth={strokeWidth} />
+  )
+}
+
+/**
+ * Shapes that cast no contact shadow: the ones hung on a wall, which never
+ * touch the floor, and the floor itself.
+ *
+ * A phantom ellipse under a poster was always wrong, but it only became loud
+ * in the shop, where the frame is fitted to what was actually drawn — the
+ * shadow was then the largest thing in the picture, and it pushed the item it
+ * was supposedly grounding up into a corner of the tile.
+ */
+const NO_SHADOW_SHAPES = new Set([
+  'poster',
+  'frame',
+  'starmap',
+  'clock',
+  'trophyshelf',
+  'fairylights',
+  'windowbox',
+  'wall',
+  'wallcolor',
+  'floor',
+])
+
 /* ------------------------------------------------------------- the shapes */
+
+/** The three greens every plant shares, so five species still look like one set. */
+const LEAF = { light: '#c3d0b9', mid: '#a7b89b', dark: '#84957a' }
+
+/** The pot under every plant — the part that *should* be the same each time. */
+function Pot({ mat, z, inset }: { mat: Material; z: number; inset: number }) {
+  return <Box z={z} mat={mat} inset={inset} />
+}
 
 interface ShapeProps { w: number; h: number; mat: Material; material: string }
 
@@ -170,7 +310,11 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
   chair: ({ mat }) => (
     <>
       <Box z={18} mat={mat} inset={0.35} />
-      <Box z={22} lift={18} mat={mat} inset={0.8} />
+      {/* The back is a slab set against one edge. A symmetric inset can only
+          make a post in the middle of the seat, which is what this was. */}
+      <g transform={`translate(${-HX * 0.24}, ${-HY * 0.24})`}>
+        <Box z={26} lift={18} mat={mat} insetW={0.82} insetH={0.42} />
+      </g>
     </>
   ),
 
@@ -188,48 +332,159 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
 
   armchair: ({ mat }) => (
     <>
-      <Box z={16} mat={mat} inset={0.2} />
-      <Box z={18} lift={16} mat={{ ...mat, top: mat.accent }} inset={0.45} />
-      <Box h={0.3} z={30} lift={10} mat={mat} inset={0.1} />
+      <Box z={14} mat={mat} inset={0.2} />
+      <Box z={10} lift={14} mat={{ ...mat, top: mat.accent }} inset={0.45} />
+      {/* Back slab at one edge... */}
+      <g transform={`translate(${-HX * 0.3}, ${-HY * 0.3})`}>
+        <Box z={30} lift={14} mat={mat} insetW={0.8} insetH={0.24} />
+      </g>
+      {/* ...and an arm down each side, which is the whole difference between
+          this and `chair`. Both need an asymmetric inset to come out as slabs. */}
+      {[-0.28, 0.28].map((d) => (
+        <g key={d} transform={`translate(${-d * HX}, ${d * HY})`}>
+          <Box z={13} lift={14} mat={mat} insetW={0.26} insetH={0.8} />
+        </g>
+      ))}
     </>
   ),
 
-  sofa: ({ w, h, mat }) => (
-    <>
-      <Box w={w} h={h} z={14} mat={mat} inset={0.2} />
-      <Box w={w} h={h} z={12} lift={14} mat={{ ...mat, top: mat.accent }} inset={0.5} />
-      <Box w={w} h={h * 0.32} z={30} lift={10} mat={mat} inset={0.08} />
-    </>
-  ),
-
-  bed: ({ w, h, mat }) => (
-    <>
-      <Box w={w} h={h} z={16} mat={mat} inset={0.25} />
-      <Box w={w} h={h} z={8} lift={16} mat={{ ...mat, top: mat.accent }} inset={0.35} />
-      <Box w={w * 0.4} h={h * 0.6} z={9} lift={24} mat={{ ...mat, top: '#fffaf2', left: '#f0e2cd', right: '#dccbb0' }} />
-    </>
-  ),
-
-  bookcase: ({ w, h, mat }) => (
-    <>
-      <Box w={w} h={h} z={64} mat={mat} inset={0.25} />
-      {/* Shelves and a few book spines, drawn on the left face. */}
-      <g transform={`translate(${-h * HX * 0.42}, ${h * HY * 0.42})`}>
-        {[18, 36, 54].map((y) => (
-          <line key={y} x1="2" y1={-y + 10} x2={h * HX * 0.72} y2={-y + 10 + h * HY * 0.72} strokeWidth="1.6" />
+  sofa: ({ w, h, mat }) => {
+    // A back along the long side and an arm at each end. Three stacked slabs of
+    // decreasing size — which is what this was — reads as a staircase.
+    const armW = 0.34
+    const armAt = (w - armW) / 2
+    const backAt = (h - 0.26) / 2
+    return (
+      <>
+        <Box w={w} h={h} z={11} mat={mat} inset={0.22} />
+        {/* Two seat cushions */}
+        {[-1, 1].map((s) => (
+          <g key={s} transform={`translate(${((s * (w - armW * 2)) / 4) * HX}, ${((s * (w - armW * 2)) / 4) * HY})`}>
+            <Box
+              w={w}
+              h={h}
+              z={9}
+              lift={11}
+              mat={{ ...mat, top: mat.accent }}
+              insetW={w - (w - armW * 2) / 2 + 0.14}
+              insetH={h - 0.46}
+            />
+          </g>
         ))}
+        {/* Back, set against the far long edge */}
+        <g transform={`translate(${backAt * HX}, ${-backAt * HY})`}>
+          <Box w={w} h={h} z={28} lift={11} mat={mat} insetW={w - (w - 0.16)} insetH={h - 0.26} />
+        </g>
+        {/* An arm at each end */}
+        {[-1, 1].map((s) => (
+          <g key={s} transform={`translate(${s * armAt * HX}, ${s * armAt * HY})`}>
+            <Box w={w} h={h} z={18} lift={11} mat={mat} insetW={w - armW} insetH={h - 0.82} />
+          </g>
+        ))}
+      </>
+    )
+  },
+
+  bed: ({ w, h, mat }) => {
+    const linen = { top: '#fffaf2', left: '#f0e2cd', right: '#dccbb0', accent: mat.accent }
+    /** Shift a part `alongX` down-right and `towardHead` up-right. */
+    const at = (alongX: number, towardHead: number) =>
+      `translate(${(alongX + towardHead) * HX}, ${(alongX - towardHead) * HY})`
+    return (
+      <>
+        {/* Frame, then mattress, then a duvet that stops short of the pillows.
+            Without the turn-down this was a slab with a white brick on it. */}
+        <Box w={w} h={h} z={13} mat={mat} inset={0.18} />
+        <Box w={w} h={h} z={8} lift={13} mat={linen} inset={0.3} />
+        <g transform={at(0, -0.34)}>
+          <Box
+            w={w}
+            h={h}
+            z={7}
+            lift={21}
+            mat={{ ...mat, top: mat.accent, left: mat.accent }}
+            insetW={0.38}
+            insetH={h - (h - 0.3) * 0.6}
+          />
+        </g>
+        {/* Two pillows at the head */}
+        {[-1, 1].map((side) => (
+          <g key={side} transform={at(side * 0.42, 0.56)}>
+            <Box w={w} h={h} z={7} lift={21} mat={linen} insetW={w - 0.62} insetH={h - 0.42} />
+          </g>
+        ))}
+        {/* Headboard */}
+        <g transform={at(0, (h - 0.2) / 2)}>
+          <Box w={w} h={h} z={34} mat={mat} insetW={0.18} insetH={h - 0.2} />
+        </g>
+      </>
+    )
+  },
+
+  bookcase: ({ w, h, mat }) => {
+    const Z = 66
+    const f = frontFace(w, h, 0.25, 0.25)
+    const shelves = [7, 24, 41, 58]
+    // Deterministic so a bookcase looks the same every time it is drawn.
+    const spines = [
+      { u: 0.2, w: 0.08, h: 12, c: mat.accent },
+      { u: 0.3, w: 0.06, h: 14, c: mat.top },
+      { u: 0.38, w: 0.09, h: 11, c: mat.accent },
+      { u: 0.56, w: 0.07, h: 13, c: mat.top },
+      { u: 0.65, w: 0.08, h: 10, c: mat.accent },
+    ]
+    return (
+      <>
+        <Box w={w} h={h} z={Z} mat={mat} inset={0.25} />
+        {/* An open front: a recess, real shelves, and books standing on them.
+            Three lines ruled across the side read as scratches, not shelves. */}
+        {facePanel(f, 0.1, 5, 0.9, Z - 5, mat.right, 2)}
+        {shelves.map((v) => facePanel(f, 0.1, v, 0.9, v + 3.5, mat.left, 1, 1))}
+        {spines.map((b, i) => (
+          <g key={b.u}>
+            {facePanel(f, b.u, shelves[i % 3]! + 3.5, b.u + b.w, shelves[i % 3]! + 3.5 + b.h, b.c, 1, 1)}
+          </g>
+        ))}
+      </>
+    )
+  },
+
+  wardrobe: ({ w, h, mat }) => {
+    const Z = 78
+    const f = frontFace(w, h, 0.2, 0.2)
+    const knob = (u: number) => {
+      const p = f(u, 40)
+      return <circle key={u} cx={p.x} cy={p.y} r="2.8" fill={mat.accent} strokeWidth="1.2" />
+    }
+    return (
+      <>
+        <Box w={w} h={h} z={Z} mat={mat} inset={0.2} />
+        {/* Two doors and a plinth. A bare box with one dot on it was a crate. */}
+        {facePanel(f, 0.09, 12, 0.48, Z - 6, mat.left, 2)}
+        {facePanel(f, 0.52, 12, 0.91, Z - 6, mat.left, 2)}
+        {facePanel(f, 0.05, 0, 0.95, 8, mat.right, 1, 1)}
+        {[0.43, 0.57].map(knob)}
+      </>
+    )
+  },
+
+  tallbox: ({ mat }) => <Box z={54} mat={mat} inset={0.45} />,
+
+  grandfather: ({ mat }) => (
+    <>
+      <Box z={74} mat={mat} inset={0.52} />
+      {/* Face and pendulum, on the left-facing side. Without them this is the
+          plain `tallbox` it used to share with the scratching post. */}
+      <g transform={`translate(${-HX * 0.24}, ${HY * 0.24 - 60})`}>
+        <circle cx="0" cy="0" r="9" fill={mat.accent} strokeWidth="1.4" />
+        <path d="M0 0 L0 -5 M0 0 L4 2" strokeWidth="1.4" fill="none" />
+      </g>
+      <g transform={`translate(${-HX * 0.24}, ${HY * 0.24 - 30})`}>
+        <rect x="-5.5" y="-13" width="11" height="26" rx="2" fill={mat.accent} opacity="0.45" strokeWidth="1.2" />
+        <circle cx="0" cy="7" r="4" fill={mat.accent} strokeWidth="1.2" />
       </g>
     </>
   ),
-
-  wardrobe: ({ w, h, mat }) => (
-    <>
-      <Box w={w} h={h} z={76} mat={mat} inset={0.2} />
-      <circle cx={-h * HX * 0.35} cy={h * HY * 0.35 - 40} r="2.6" fill={mat.accent} />
-    </>
-  ),
-
-  tallbox: ({ mat }) => <Box z={54} mat={mat} inset={0.45} />,
 
   piano: ({ w, h, mat }) => (
     <>
@@ -242,31 +497,153 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </>
   ),
 
-  'plant-small': ({ mat }) => (
+  /*
+   * Five plants used to share two silhouettes, so a 1,500-coin bonsai and a
+   * 70-coin succulent were the same drawing in a different pot. Each has its
+   * own now; the pot stays shared, because the pot is the part that should
+   * match.
+   */
+  succulent: ({ mat }) => (
     <>
-      <Box z={14} mat={mat} inset={0.62} />
-      <g transform={`translate(0, ${HY - 16})`}>
-        <ellipse cx="-6" cy="-8" rx="9" ry="6" fill="#a7b89b" transform="rotate(-24 -6 -8)" />
-        <ellipse cx="7" cy="-11" rx="8" ry="5.5" fill="#c3d0b9" transform="rotate(20 7 -11)" />
-        <ellipse cx="0" cy="-18" rx="7" ry="5" fill="#84957a" />
+      <Pot mat={mat} z={14} inset={0.6} />
+      <g transform={`translate(0, ${HY - 14})`} strokeWidth="1.4">
+        {/* A rosette: fat pointed leaves fanning out from the middle. */}
+        {[-70, -35, 0, 35, 70, 110, -110].map((deg, i) => (
+          <ellipse
+            key={deg}
+            cx="0"
+            cy="-9"
+            rx="4"
+            ry="9"
+            fill={i % 2 === 0 ? LEAF.mid : LEAF.light}
+            transform={`rotate(${deg} 0 0)`}
+          />
+        ))}
+        <circle cx="0" cy="-2" r="3.4" fill={LEAF.dark} />
       </g>
     </>
   ),
 
-  'plant-tall': ({ mat }) => (
+  fern: ({ mat }) => (
     <>
-      <Box z={18} mat={mat} inset={0.58} />
-      <g transform={`translate(0, ${HY - 20})`} fill="none" stroke="#7f9472" strokeWidth="3">
-        <path d="M0 0 C -8 -14 -10 -26 -3 -34" />
-        <path d="M0 0 C 8 -12 13 -24 8 -32" />
-      </g>
-      <g transform={`translate(0, ${HY - 20})`}>
-        <ellipse cx="-5" cy="-38" rx="11" ry="7" fill="#a7b89b" transform="rotate(-28 -5 -38)" />
-        <ellipse cx="10" cy="-34" rx="10" ry="6.5" fill="#c3d0b9" transform="rotate(24 10 -34)" />
-        <ellipse cx="1" cy="-48" rx="8" ry="6" fill="#84957a" />
+      <Pot mat={mat} z={16} inset={0.62} />
+      <g transform={`translate(0, ${HY - 16})`}>
+        {/* Arching fronds, each with leaflets down its length. */}
+        {[-1, -0.45, 0.2, 0.85].map((lean, i) => {
+          const tipX = lean * 22
+          const tipY = -30 - Math.abs(lean) * -6
+          return (
+            <g key={lean}>
+              <path
+                d={`M0 0 Q ${tipX * 0.4} ${tipY * 0.7} ${tipX} ${tipY}`}
+                fill="none"
+                stroke={LEAF.dark}
+                strokeWidth="1.8"
+              />
+              {[0.35, 0.6, 0.85].map((t) => (
+                <ellipse
+                  key={t}
+                  cx={tipX * t * 0.82}
+                  cy={tipY * t * 0.92}
+                  rx="5.5"
+                  ry="3"
+                  fill={i % 2 === 0 ? LEAF.mid : LEAF.light}
+                  transform={`rotate(${lean * 38} ${tipX * t * 0.82} ${tipY * t * 0.92})`}
+                />
+              ))}
+            </g>
+          )
+        })}
       </g>
     </>
   ),
+
+  monstera: ({ mat }) => (
+    <>
+      <Pot mat={mat} z={18} inset={0.56} />
+      <g transform={`translate(0, ${HY - 18})`}>
+        {[
+          { x: -13, y: -40, r: -26, fill: LEAF.mid },
+          { x: 12, y: -34, r: 22, fill: LEAF.light },
+          { x: 0, y: -54, r: -4, fill: LEAF.dark },
+        ].map((leaf) => (
+          <g key={`${leaf.x}-${leaf.y}`}>
+            <path
+              d={`M0 0 Q ${leaf.x * 0.3} ${leaf.y * 0.6} ${leaf.x} ${leaf.y}`}
+              fill="none"
+              stroke={LEAF.dark}
+              strokeWidth="2.2"
+            />
+            {/* Big paddle leaves with the splits they are named for. */}
+            <g transform={`translate(${leaf.x} ${leaf.y}) rotate(${leaf.r})`}>
+              <path
+                d="M0 8 C -12 6 -13 -6 0 -11 C 13 -6 12 6 0 8 Z"
+                fill={leaf.fill}
+                strokeWidth="1.6"
+              />
+              <path d="M-11 1 L -4 1 M 11 1 L 4 1 M -9 -5 L -3 -4 M 9 -5 L 3 -4" stroke={OUTLINE} strokeWidth="1.2" opacity="0.55" />
+            </g>
+          </g>
+        ))}
+      </g>
+    </>
+  ),
+
+  olive: ({ mat }) => (
+    <>
+      <Pot mat={mat} z={18} inset={0.5} />
+      <g transform={`translate(0, ${HY - 18})`}>
+        <path d="M0 0 C -3 -14 2 -22 0 -34" fill="none" stroke={MATERIALS.walnut!.right} strokeWidth="3.4" />
+        {/* A loose canopy of small leaves rather than three big ones. */}
+        {[
+          [0, -46, 17, 11],
+          [-11, -38, 11, 7],
+          [11, -39, 10, 7],
+          [-5, -55, 9, 6],
+          [7, -54, 8, 6],
+        ].map(([cx, cy, rx, ry]) => (
+          <ellipse key={`${cx}-${cy}`} cx={cx} cy={cy} rx={rx} ry={ry} fill={LEAF.light} />
+        ))}
+        {[
+          [-8, -44],
+          [6, -48],
+          [0, -38],
+        ].map(([cx, cy]) => (
+          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2.2" fill={LEAF.dark} strokeWidth="1" />
+        ))}
+      </g>
+    </>
+  ),
+
+  bonsai: ({ mat }) => (
+    <>
+      <Pot mat={mat} z={11} inset={0.34} />
+      <g transform={`translate(0, ${HY - 11})`}>
+        {/* A short trunk with a real bend in it, and flat cloud pads. */}
+        <path
+          d="M2 0 C -6 -8 8 -13 2 -22 C -2 -27 -8 -27 -11 -29"
+          fill="none"
+          stroke={MATERIALS.walnut!.right}
+          strokeWidth="4"
+        />
+        <path d="M2 -18 C 8 -21 13 -24 16 -25" fill="none" stroke={MATERIALS.walnut!.right} strokeWidth="2.6" />
+        <ellipse cx="-13" cy="-32" rx="13" ry="7" fill={LEAF.mid} />
+        <ellipse cx="17" cy="-28" rx="10" ry="6" fill={LEAF.light} />
+        <ellipse cx="0" cy="-40" rx="11" ry="6.5" fill={LEAF.dark} />
+      </g>
+    </>
+  ),
+
+  /*
+   * The old shared plant shapes, kept as aliases.
+   *
+   * The site deploys from a push and the database migrates separately, so for
+   * a while the bundle can be newer than the rows it is drawing. Without these
+   * an un-migrated `plant-small/sage` would hit the unknown-shape fallback and
+   * the plants would get *worse* on deploy than they were before.
+   */
+  'plant-small': (p) => SHAPES.succulent!(p),
+  'plant-tall': (p) => SHAPES.monstera!(p),
 
   'toy-ball': ({ mat }) => (
     <g transform={`translate(0, ${HY - 9})`}>
@@ -399,6 +776,40 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </g>
   ),
 
+  /*
+   * Floors and walls are not objects. The room paints them across its whole
+   * surface, so these art keys never reach this renderer there — but they do
+   * reach the shop, which was falling through to the unknown-shape box and
+   * showing a dozen identical brown cubes.
+   *
+   * Each one is a swatch of the real thing: the same checker the floor draws,
+   * the same two faces and skirting the walls draw. What you see is what the
+   * room will look like.
+   */
+  floor: ({ mat }) => (
+    <g>
+      {[
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [1, 1],
+      ].map(([i, j]) => (
+        <g key={`${i}-${j}`} transform={`translate(${(i! - j!) * HX}, ${(i! + j!) * HY})`}>
+          <FlatDiamond w={1} h={1} fill={(i! + j!) % 2 === 0 ? mat.top : mat.left} />
+        </g>
+      ))}
+    </g>
+  ),
+
+  wall: ({ mat }) => <WallSwatch left={mat.left} right={mat.right} skirting={mat.accent} />,
+
+  wallcolor: ({ material }) => {
+    const wash = WALL_WASHES[material] ?? WALL_WASHES.cream!
+    // The wash only repaints the walls; the skirting stays whatever the wall
+    // material is, so show it in the default plaster.
+    return <WallSwatch left={wash.left} right={wash.right} skirting={MATERIALS.plaster!.accent} />
+  },
+
   'rug-round': ({ w, h, mat }) => {
     const cx = ((w - h) * HX) / 2
     const cy = ((w + h) * HY) / 2
@@ -463,10 +874,10 @@ export const Furniture = memo(function Furniture({
       opacity={ghost ? 0.6 : 1}
       style={ghost === 'invalid' ? { filter: 'hue-rotate(-40deg) saturate(2.2)' } : undefined}
     >
-      {shadow && !ghost && <ContactShadow w={size.w} h={size.h} />}
+      {shadow && !ghost && !NO_SHADOW_SHAPES.has(shape) && <ContactShadow w={size.w} h={size.h} />}
       {body}
     </g>
   )
 })
 
-export { SHAPES }
+export { SHAPES, NO_SHADOW_SHAPES }

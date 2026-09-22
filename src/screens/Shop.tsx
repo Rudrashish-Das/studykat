@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Hud } from '@/components/hud/Hud'
 import { CoinMark } from '@/components/hud/Hud'
-import { Furniture } from '@/components/room/Furniture'
+import { FurniturePreview } from '@/components/room/FurniturePreview'
 import { Button } from '@/components/ui/Button'
 import { Notice } from '@/components/ui/Notice'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
@@ -163,15 +163,13 @@ function ShopCard({
     <li className="flex flex-col rounded-cozy border border-ink-line/70 bg-paper p-4 shadow-cozy">
       {/* A real preview, drawn with the same renderer the room uses. */}
       <div className="grid h-28 place-items-center rounded-xl bg-cream-100">
-        <svg viewBox="-70 -90 140 130" className="h-full w-full" aria-hidden>
-          <g opacity={unlocked ? 1 : 0.45}>
-            <Furniture
-              artKey={item.art_key}
-              footprintW={item.footprint_w}
-              footprintH={item.footprint_h}
-            />
-          </g>
-        </svg>
+        <FurniturePreview
+          artKey={item.art_key}
+          footprintW={item.footprint_w}
+          footprintH={item.footprint_h}
+          className="h-full w-full"
+          opacity={unlocked ? 1 : 0.45}
+        />
       </div>
 
       <h2 className="mt-3 text-base">{item.name}</h2>
