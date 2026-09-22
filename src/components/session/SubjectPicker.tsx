@@ -4,7 +4,9 @@ import { useCreateSubject, useSubjects } from '@/lib/queries/sessions'
 import type { Subject } from '@/lib/supabase/types'
 
 const chip = cn(
-  'inline-flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-pill border px-3.5 py-1.5 text-sm font-bold',
+  // Relative so each hidden radio stays inside its chip; otherwise it sits against the page and
+  // the ones further along the swipe row widen the whole screen.
+  'relative inline-flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-pill border px-3.5 py-1.5 text-sm font-bold',
   'transition-colors duration-cozy ease-cozy',
   'has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-teal-dark',
 )
@@ -98,48 +100,7 @@ export function SubjectPicker({
           </label>
         ))}
 
-        {adding ? (
-          <form
-            className="inline-flex shrink-0 items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault()
-              add()
-            }}
-          >
-            <input
-              ref={inputRef}
-              aria-label="New subject name"
-              placeholder="e.g. Maths"
-              maxLength={40}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setAdding(false)
-                  setName('')
-                }
-              }}
-              className="w-36 rounded-pill border border-ink-line bg-cream-50 px-3.5 py-1.5 text-sm text-ink placeholder:text-ink-faint focus:border-teal-dark"
-            />
-            <button
-              type="submit"
-              disabled={!trimmed || duplicate || createSubject.isPending}
-              className="rounded-pill px-3 py-1.5 text-sm font-bold text-teal-dark disabled:opacity-50"
-            >
-              {createSubject.isPending ? 'Adding…' : 'Add'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAdding(false)
-                setName('')
-              }}
-              className="rounded-pill px-2 py-1.5 text-sm text-ink-soft hover:text-ink"
-            >
-              Cancel
-            </button>
-          </form>
-        ) : (
+        {!adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
@@ -149,6 +110,50 @@ export function SubjectPicker({
           </button>
         )}
       </div>
+
+      {/* Its own line so the field and its buttons are never scrolled off the end of the chips. */}
+      {adding && (
+        <form
+          className="mt-2 flex items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            add()
+          }}
+        >
+          <input
+            ref={inputRef}
+            aria-label="New subject name"
+            placeholder="e.g. Maths"
+            maxLength={40}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setAdding(false)
+                setName('')
+              }
+            }}
+            className="min-w-0 flex-1 rounded-pill border border-ink-line bg-cream-50 px-3.5 py-1.5 text-sm text-ink placeholder:text-ink-faint focus:border-teal-dark sm:w-56 sm:flex-none"
+          />
+          <button
+            type="submit"
+            disabled={!trimmed || duplicate || createSubject.isPending}
+            className="rounded-pill px-3 py-1.5 text-sm font-bold text-teal-dark disabled:opacity-50"
+          >
+            {createSubject.isPending ? 'Adding…' : 'Add'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAdding(false)
+              setName('')
+            }}
+            className="rounded-pill px-2 py-1.5 text-sm text-ink-soft hover:text-ink"
+          >
+            Cancel
+          </button>
+        </form>
+      )}
 
       {adding && duplicate && (
         <p className="mt-1.5 text-xs text-ink-faint">You already have a subject with that name.</p>
