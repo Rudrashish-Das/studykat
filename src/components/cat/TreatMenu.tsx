@@ -65,7 +65,7 @@ export function TreatMenu({
           aria-expanded={open}
           aria-controls={panelId}
           onClick={toggle}
-          className="-m-1 flex w-[calc(100%+0.5rem)] items-center gap-2 rounded-lg p-1 text-left hover:bg-cream-100"
+          className="-m-1 flex w-[calc(100%+0.5rem)] items-center gap-2 rounded-lg p-1 text-left [@media(hover:hover)]:hover:bg-cream-100"
         >
           <span className="flex-1">Treats for {catName}</span>
           {open && (
@@ -102,7 +102,7 @@ export function TreatMenu({
           </Notice>
         )}
 
-        <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+        <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3">
           {foods.data.map((food) => {
             const affordable = coins >= food.price
             const busy = feed.isPending && feed.variables?.id === food.id
@@ -123,7 +123,7 @@ export function TreatMenu({
                   className={cn(
                     'flex w-full flex-col items-center gap-1 rounded-xl bg-cream-100 px-2 pb-2 pt-3 text-center',
                     'transition-[transform,background-color] duration-cozy ease-cozy',
-                    'hover:-translate-y-0.5 hover:bg-cream-200 active:translate-y-px',
+                    '[@media(hover:hover)]:hover:-translate-y-0.5 [@media(hover:hover)]:hover:bg-cream-200 active:translate-y-px',
                     'disabled:pointer-events-none disabled:opacity-55',
                     busy && 'animate-pulse',
                   )}
