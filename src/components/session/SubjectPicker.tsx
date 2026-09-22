@@ -7,21 +7,9 @@ const chip = cn(
   // Relative so each hidden radio stays inside its chip; otherwise it sits against the page and
   // the ones further along the swipe row widen the whole screen.
   'relative inline-flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-pill border px-3.5 py-1.5 text-sm font-bold',
-  'transition-[color,background-color,border-color,box-shadow,transform] duration-cozy ease-cozy active:scale-95',
+  'transition-colors duration-cozy ease-cozy',
   'has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-teal-dark',
 )
-
-/** Loud enough to spot at a glance on a phone, where there is no hover to help. */
-const chipOn = 'border-sage-deep bg-sage-mid text-ink ring-2 ring-sage-deep shadow-cozy'
-const chipOff = 'border-ink-line/70 bg-cream-50 text-ink-soft hover:text-ink'
-
-function Check() {
-  return (
-    <svg aria-hidden viewBox="0 0 12 12" className="-ml-0.5 h-3 w-3" fill="none">
-      <path d="M2 6.5 5 9l5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 /**
  * Pick what the next session is for. `null` means no subject. Creating a
@@ -71,7 +59,9 @@ export function SubjectPicker({
         <label
           className={cn(
             chip,
-            value === null ? chipOn : chipOff,
+            value === null
+              ? 'border-sage-dark bg-sage-light text-ink'
+              : 'border-ink-line/70 bg-cream-50 text-ink-soft hover:text-ink',
           )}
         >
           <input
@@ -81,7 +71,6 @@ export function SubjectPicker({
             onChange={() => onChange(null)}
             className="sr-only"
           />
-          {value === null && <Check />}
           No subject
         </label>
 
@@ -90,7 +79,9 @@ export function SubjectPicker({
             key={subject.id}
             className={cn(
               chip,
-              value === subject.id ? chipOn : chipOff,
+              value === subject.id
+                ? 'border-sage-dark bg-sage-light text-ink'
+                : 'border-ink-line/70 bg-cream-50 text-ink-soft hover:text-ink',
             )}
           >
             <input
@@ -100,7 +91,6 @@ export function SubjectPicker({
               onChange={() => onChange(subject.id)}
               className="sr-only"
             />
-            {value === subject.id && <Check />}
             <span
               aria-hidden
               className="h-2.5 w-2.5 rounded-full"
