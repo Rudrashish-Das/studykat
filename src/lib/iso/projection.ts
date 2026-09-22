@@ -22,6 +22,13 @@ export const ORIGIN_Y = 96
 export const ROOM_W = GRID_SIZE * TILE_W
 export const ROOM_H = GRID_SIZE * TILE_H + ORIGIN_Y + 64
 
+/**
+ * Lets the room grow past its native size on big screens, as large as fits the
+ * viewport's height (leaving room for the nav and heading), but never below its
+ * native size and never wider than its column.
+ */
+export const ROOM_GROWS_WITH_SCREEN = `min(100%, max(${ROOM_W}px, calc((100dvh - 12rem) * ${ROOM_W} / ${ROOM_H})))`
+
 export interface Point {
   x: number
   y: number

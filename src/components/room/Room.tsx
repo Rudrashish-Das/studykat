@@ -53,6 +53,11 @@ export interface RoomProps {
   onItemVisit?: (id: string) => void
   /** 0 (noon) to 1 (deep night); drives the tint overlay. */
   nightness?: number
+  /**
+   * Widest the room may draw. Defaults to its native size; pass
+   * ROOM_GROWS_WITH_SCREEN to let it fill a big screen instead.
+   */
+  maxWidth?: number | string
   className?: string
   /* Editor affordances — all optional, so the Home screen stays read-only. */
   interactive?: boolean
@@ -86,6 +91,7 @@ export function Room({
   catName = 'the cat',
   onItemVisit,
   nightness = 0,
+  maxWidth = ROOM_W,
   className,
   interactive = false,
   selectedId = null,
@@ -249,7 +255,7 @@ export function Room({
       // and Chrome can keep its unscaled width as page overflow (it does not
       // recompute it when the scale changes), which let phones scroll sideways.
       // The margin keeps furniture at the room's corners from being cut off.
-      style={{ maxWidth: ROOM_W, perspective: '1200px', overflowX: 'clip', overflowClipMargin: 16 }}
+      style={{ maxWidth, perspective: '1200px', overflowX: 'clip', overflowClipMargin: 16 }}
       onPointerMove={handleMove}
       onPointerLeave={handleLeave}
     >

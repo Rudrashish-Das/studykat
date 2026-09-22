@@ -72,7 +72,7 @@ export function Shop() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-4 sm:px-5">
+    <div className="mx-auto w-full max-w-5xl lg:max-w-7xl 2xl:max-w-[96rem] px-4 pb-10 pt-4 sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl">Shop</h1>
@@ -119,7 +119,7 @@ export function Shop() {
       {items.length === 0 ? (
         <p className="mt-10 text-center text-ink-faint">Nothing in this category yet.</p>
       ) : (
-        <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {items.map((item) => (
             <ShopCard
               key={item.id}

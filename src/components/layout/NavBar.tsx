@@ -26,7 +26,7 @@ export function NavBar() {
         'sm:sticky sm:bottom-auto sm:top-0 sm:order-first sm:border-b sm:border-t-0 sm:pb-0',
       )}
     >
-      <div className="mx-auto flex w-full max-w-5xl items-center gap-1 px-3 py-2 sm:gap-2 sm:px-5 sm:py-3">
+      <div className="mx-auto flex w-full max-w-5xl lg:max-w-7xl 2xl:max-w-[96rem] items-center gap-1 px-3 py-2 sm:gap-2 sm:px-5 sm:py-3">
         {/* The wordmark reads as a logo, so it has to behave like one: back to
             the room, the way every other app's logo goes home. */}
         <Link

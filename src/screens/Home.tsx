@@ -17,6 +17,7 @@ import { paths } from '@/lib/paths'
 import { formatMinutes } from '@/lib/timer'
 import { ClockTimeZone, localTimeOfDay, nightnessFor, useNow } from '@/lib/daynight'
 import { useCatAppearance } from '@/lib/cat/useCatAppearance'
+import { ROOM_GROWS_WITH_SCREEN } from '@/lib/iso/projection'
 
 const SUBJECT_KEY = 'studycat:last-subject'
 
@@ -80,7 +81,7 @@ export function Home() {
     : { show: false, minutesLeft: 0 }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 pb-8 pt-4 sm:px-5">
+    <div className="mx-auto w-full max-w-5xl px-4 pb-8 pt-4 sm:px-5 lg:max-w-7xl 2xl:max-w-[96rem]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl sm:text-3xl">{profile.cat_name}&apos;s room</h1>
@@ -98,82 +99,89 @@ export function Home() {
         />
       </div>
 
-      <ClockTimeZone.Provider value={timeZone}>
-        <Room
-          placed={placed}
-          cat={appearance}
-          catPose={catLife.pose}
-          catTile={catLife.tile}
-          catFacing={catLife.facing}
-          catPerch={catLife.perch}
-          catEffect={catLife.effect}
-          catPats={catLife.pats}
-          catMeal={catLife.meal}
-          activeItem={catLife.activeItem}
-          catName={profile.cat_name}
-          onCatClick={catLife.pet}
-          onItemVisit={catLife.visit}
-          nightness={nightnessFor(localTimeOfDay(now, timeZone))}
-          className="mt-5"
-        />
-      </ClockTimeZone.Provider>
+      {/* One column on phones and tablets; on wide screens the room takes the
+          left and everything you act on stacks beside it. */}
+      <div className="lg:mt-5 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <ClockTimeZone.Provider value={timeZone}>
+          <Room
+            placed={placed}
+            cat={appearance}
+            catPose={catLife.pose}
+            catTile={catLife.tile}
+            catFacing={catLife.facing}
+            catPerch={catLife.perch}
+            catEffect={catLife.effect}
+            catPats={catLife.pats}
+            catMeal={catLife.meal}
+            activeItem={catLife.activeItem}
+            catName={profile.cat_name}
+            onCatClick={catLife.pet}
+            onItemVisit={catLife.visit}
+            nightness={nightnessFor(localTimeOfDay(now, timeZone))}
+            maxWidth={ROOM_GROWS_WITH_SCREEN}
+            className="mt-5 lg:mt-0"
+          />
+        </ClockTimeZone.Provider>
 
-      <TreatMenu
-        catName={profile.cat_name}
-        coins={summary?.coins ?? 0}
-        eating={catLife.eating}
-        onFed={catLife.feed}
-        className="mt-5"
-      />
+        <div>
+          <TreatMenu
+            catName={profile.cat_name}
+            coins={summary?.coins ?? 0}
+            eating={catLife.eating}
+            onFed={catLife.feed}
+            className="mt-5 lg:mt-0"
+          />
 
-      {nudge.show && (
-        <Notice className="mt-5">
-          Study {formatMinutes(nudge.minutesLeft)} more today to{' '}
-          {summary?.current_streak
-            ? `keep your ${summary.current_streak}-day streak.`
-            : 'start a streak.'}
-        </Notice>
-      )}
+          {nudge.show && (
+            <Notice className="mt-5">
+              Study {formatMinutes(nudge.minutesLeft)} more today to{' '}
+              {summary?.current_streak
+                ? `keep your ${summary.current_streak}-day streak.`
+                : 'start a streak.'}
+            </Notice>
+          )}
 
-      {startSession.isError && (
-        <Notice tone="error" className="mt-5">
-          Could not start a session: {(startSession.error).message}
-        </Notice>
-      )}
+          {startSession.isError && (
+            <Notice tone="error" className="mt-5">
+              Could not start a session: {(startSession.error).message}
+            </Notice>
+          )}
 
-      <section className="mt-6 rounded-cozy border border-ink-line/70 bg-paper p-4 shadow-cozy sm:p-6">
-        <SubjectPicker value={subjectId} onChange={chooseSubject} />
+          <section className="mt-6 rounded-cozy border border-ink-line/70 bg-paper p-4 shadow-cozy sm:p-6">
+            <SubjectPicker value={subjectId} onChange={chooseSubject} />
 
-        <div className="mt-5 flex flex-col gap-3 border-t border-ink-line/50 pt-5 sm:flex-row sm:items-center">
-          <Button
-            size="lg"
-            className="w-full sm:w-auto"
-            disabled={startSession.isPending}
-            onClick={() => {
-              startSession.mutate(
-                { subjectId },
-                { onSuccess: () => navigate(paths.focus) },
-              )
-            }}
-          >
-            {startSession.isPending ? 'Starting…' : 'Start studying'}
-          </Button>
-          <div className="grid grid-cols-2 gap-3 sm:ml-auto sm:flex">
-            <ButtonLink to={paths.room} variant="secondary">
-              Edit room
-            </ButtonLink>
-            <ButtonLink to={paths.shop} variant="outline">
-              <CoinMark size={16} />
-              Shop
-            </ButtonLink>
-          </div>
+            <div className="mt-5 flex flex-col gap-3 border-t border-ink-line/50 pt-5 sm:flex-row sm:items-center lg:flex-col lg:items-stretch">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto lg:w-full"
+                disabled={startSession.isPending}
+                onClick={() => {
+                  startSession.mutate(
+                    { subjectId },
+                    { onSuccess: () => navigate(paths.focus) },
+                  )
+                }}
+              >
+                {startSession.isPending ? 'Starting…' : 'Start studying'}
+              </Button>
+              <div className="grid grid-cols-2 gap-3 sm:ml-auto sm:flex lg:ml-0 lg:grid">
+                <ButtonLink to={paths.room} variant="secondary">
+                  Edit room
+                </ButtonLink>
+                <ButtonLink to={paths.shop} variant="outline">
+                  <CoinMark size={16} />
+                  Shop
+                </ButtonLink>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs leading-relaxed text-ink-faint">
+              One coin a minute, more after 25 minutes, more again as your streak grows. Sessions under
+              five minutes earn nothing and do not count toward your streak.
+            </p>
+          </section>
         </div>
-
-        <p className="mt-4 text-xs leading-relaxed text-ink-faint">
-          One coin a minute, more after 25 minutes, more again as your streak grows. Sessions under
-          five minutes earn nothing and do not count toward your streak.
-        </p>
-      </section>
+      </div>
     </div>
   )
 }

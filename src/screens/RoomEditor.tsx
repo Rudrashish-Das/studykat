@@ -183,7 +183,7 @@ export function RoomEditor() {
       : null
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-4 sm:px-5">
+    <div className="mx-auto w-full max-w-5xl lg:max-w-7xl 2xl:max-w-[96rem] px-4 pb-10 pt-4 sm:px-5">
       <h1 className="text-2xl sm:text-3xl">Arrange the room</h1>
       <p className="mt-1 text-sm text-ink-soft">
         Pick something, then click where it goes. Arrow keys move it, <kbd>R</kbd> rotates,{' '}
