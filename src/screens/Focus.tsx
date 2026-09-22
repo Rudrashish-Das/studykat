@@ -170,7 +170,7 @@ export function Focus() {
         )}
 
         <p className="mt-10 text-xs text-moon/40">
-          The clock runs on the server. You can close this tab.
+          {/* The clock runs on the server. You can close this tab. */}
         </p>
       </div>
     </div>
