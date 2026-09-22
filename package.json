@@ -13,7 +13,9 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test:sql": "node scripts/sql-test.mjs"
+    "test:sql": "node scripts/sql-test.mjs",
+    "check:imports": "node scripts/check-import-case.mjs",
+    "verify": "npm run lint && npm run check:imports && npm run typecheck && npm test && npm run test:sql && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

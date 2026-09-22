@@ -30,6 +30,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Imports resolve case-sensitively
+        # Windows and macOS resolve imports case-insensitively; Linux does not.
+        run: npm run check:imports
+
       - name: Typecheck
         run: npm run typecheck
 

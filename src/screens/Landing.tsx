@@ -38,7 +38,7 @@ export function Landing() {
           </h1>
           <p className="mt-5 max-w-prose text-lg text-ink-soft">
             A quiet timer that pays you in coins for focused minutes, keeps your streak, and lets
-            you spend it all decorating one small room for a cat that exists on no other account.
+            you spend it all decorating one small room for a cat that is unique to you.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">

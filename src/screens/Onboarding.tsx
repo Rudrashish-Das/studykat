@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
@@ -40,7 +40,15 @@ export function Onboarding() {
   // Tracked separately from `goal` so the field can hold a half-typed number
   // without the preset chips flickering as you type.
   const [customGoal, setCustomGoal] = useState('')
-  const usingCustom = !GOALS.some((option) => option.minutes === goal)
+  const [usingCustom, setUsingCustom] = useState(false)
+  const customInputRef = useRef<HTMLInputElement>(null)
+
+  // Move focus to the field when it appears, so choosing "Custom" lands you in
+  // the box ready to type. Done here rather than with `autoFocus`, which fires
+  // on mount whether or not the user asked for it.
+  useEffect(() => {
+    if (usingCustom) customInputRef.current?.focus()
+  }, [usingCustom])
   const [timezone, setTimezone] = useState(guessTimeZone)
   const [error, setError] = useState<string | null>(null)
 
@@ -83,7 +91,7 @@ export function Onboarding() {
       </p>
       <h1 className="text-3xl sm:text-4xl">Meet your cat</h1>
       <p className="mt-3 max-w-prose text-ink-soft">
-        These three came from your account&apos;s seed and no one else&apos;s. Pick the one you like
+        These three are unique to you and no one else will have the same cat. Pick the one you like
         — whichever you choose is yours for good.
       </p>
 
@@ -133,8 +141,11 @@ export function Onboarding() {
               <button
                 key={option.minutes}
                 type="button"
-                onClick={() => setGoal(option.minutes)}
-                aria-pressed={goal === option.minutes}
+                onClick={() => {
+                  setUsingCustom(false)
+                  setGoal(option.minutes)
+                }}
+                aria-pressed={!usingCustom && goal === option.minutes}
                 className={cn(
                   'rounded-xl border-2 px-3 py-3 text-center transition-colors duration-cozy ease-cozy',
                   goal === option.minutes
@@ -153,6 +164,7 @@ export function Onboarding() {
                 // Seed the field from whatever is currently selected, so the
                 // custom option starts from the number you were already on.
                 const start = customGoal || String(goal)
+                setUsingCustom(true)
                 setCustomGoal(start)
                 setGoal(clampDailyGoal(Number(start)))
               }}
@@ -180,8 +192,8 @@ export function Onboarding() {
                 min={DAILY_GOAL_MIN}
                 max={DAILY_GOAL_MAX}
                 step={5}
+                ref={customInputRef}
                 value={customGoal}
-                autoFocus
                 onChange={(e) => {
                   setCustomGoal(e.target.value)
                   const parsed = Number(e.target.value)
@@ -210,7 +222,7 @@ export function Onboarding() {
         <TimeZoneSelect
           value={timezone}
           onChange={setTimezone}
-          hint="This decides when your day rolls over, so the streak lines up with your actual midnight rather than UTC's."
+          hint="This decides when your day rolls over, so the streak lines up with your actual midnight."
         />
 
         {error && <Notice tone="error">{error}</Notice>}
