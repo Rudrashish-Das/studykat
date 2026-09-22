@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Room } from '@/components/room/Room'
-import { Hud } from '@/components/hud/Hud'
+import { CoinMark, Hud } from '@/components/hud/Hud'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
 import { Notice } from '@/components/ui/Notice'
@@ -140,7 +140,8 @@ export function Home() {
         <ButtonLink to={paths.room} variant="secondary" size="lg">
           Edit room
         </ButtonLink>
-        <ButtonLink to={paths.shop} variant="ghost" size="lg">
+        <ButtonLink to={paths.shop} variant="outline" size="lg">
+          <CoinMark size={18} />
           Shop
         </ButtonLink>
       </div>
