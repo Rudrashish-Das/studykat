@@ -40,6 +40,101 @@ const green = (s) => `\x1b[32m${s}\x1b[0m`
 const red = (s) => `\x1b[31m${s}\x1b[0m`
 const dim = (s) => `\x1b[2m${s}\x1b[0m`
 
+/* --------------------------------------------------- schema vs. types ---- */
+
+/**
+ * `src/lib/supabase/types.ts` and `database.ts` are hand-written to match the
+ * migrations, which means they can drift — and when they do, nothing complains
+ * until a column reads back `undefined` in production. Now that the real schema
+ * exists in this process, check the two against each other.
+ *
+ * A field in TypeScript that the database does not have is a hard failure. The
+ * reverse is fine and common: plenty of columns (`updated_at`, `sort_order`)
+ * are deliberately not modelled.
+ */
+const TYPE_TO_TABLE = {
+  Profile: 'profiles',
+  Subject: 'subjects',
+  StudySession: 'study_sessions',
+  Wallet: 'wallet',
+  Transaction: 'transactions',
+  Streak: 'streaks',
+  CatalogItem: 'catalog_items',
+  InventoryRow: 'inventory',
+  RoomLayoutRow: 'room_layout',
+}
+
+function fieldsOfType(source, typeName) {
+  const start = source.indexOf(`export type ${typeName} = {`)
+  if (start === -1) return null
+  let depth = 0
+  let i = source.indexOf('{', start)
+  const open = i
+  for (; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1
+    else if (source[i] === '}') {
+      depth -= 1
+      if (depth === 0) break
+    }
+  }
+  const body = source.slice(open + 1, i)
+  // Top-level `name:` lines only — skip anything nested inside a sub-object.
+  return body
+    .split('\n')
+    .map((line) => /^ {2}(\w+)\??:/.exec(line))
+    .filter(Boolean)
+    .map((m) => m[1])
+}
+
+async function checkSchemaMatchesTypes(db) {
+  const typesSrc = readFileSync(join(root, 'src', 'lib', 'supabase', 'types.ts'), 'utf8')
+  const dbSrc = readFileSync(join(root, 'src', 'lib', 'supabase', 'database.ts'), 'utf8')
+  let failed = false
+
+  for (const [typeName, table] of Object.entries(TYPE_TO_TABLE)) {
+    const fields = fieldsOfType(typesSrc, typeName)
+    if (!fields) {
+      console.log(`${red('fail')}  type ${typeName} not found in types.ts`)
+      failed = true
+      continue
+    }
+    const { rows } = await db.query(
+      `select column_name from information_schema.columns
+        where table_schema = 'public' and table_name = $1`,
+      [table],
+    )
+    const columns = new Set(rows.map((r) => r.column_name))
+    const missing = fields.filter((f) => !columns.has(f))
+    if (missing.length > 0) {
+      console.log(`${red('fail')}  ${typeName} -> ${table}: no such column: ${missing.join(', ')}`)
+      failed = true
+    } else {
+      const unmodelled = [...columns].filter((c) => !fields.includes(c))
+      const note = unmodelled.length > 0 ? dim(` (not modelled: ${unmodelled.join(', ')})`) : ''
+      console.log(`${green('  ok')}  ${typeName} -> ${table}${note}`)
+    }
+  }
+
+  // Every RPC the client can name must exist, or it is a runtime 404.
+  const fnBlock = dbSrc.slice(dbSrc.indexOf('Functions: {'), dbSrc.indexOf('Enums: {'))
+  const declared = [...fnBlock.matchAll(/^ {6}(\w+): \{/gm)].map((m) => m[1])
+  const { rows: procs } = await db.query(
+    `select p.proname from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'`,
+  )
+  const existing = new Set(procs.map((r) => r.proname))
+  const missingFns = declared.filter((f) => !existing.has(f))
+  if (missingFns.length > 0) {
+    console.log(`${red('fail')}  RPCs declared in database.ts but absent: ${missingFns.join(', ')}`)
+    failed = true
+  } else {
+    console.log(`${green('  ok')}  ${declared.length} RPCs in database.ts all exist`)
+  }
+
+  return !failed
+}
+
 async function main() {
   const db = await PGlite.create()
   const version = (await db.query('select version()')).rows[0].version
@@ -89,6 +184,14 @@ async function main() {
     console.error(red(error.message))
     if (error.detail) console.error(dim(`detail: ${error.detail}`))
     if (error.where) console.error(dim(error.where))
+    process.exit(1)
+  }
+
+  console.log()
+  console.log(dim('checking the hand-written types against the real schema...'))
+  const typesOk = await checkSchemaMatchesTypes(db)
+  if (!typesOk) {
+    console.error(`\n${red('TypeScript types do not match the schema.')}`)
     process.exit(1)
   }
 

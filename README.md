@@ -45,6 +45,12 @@ PostgreSQL compiled to WebAssembly — so the schema, the row-level security
 policies and the whole economy are exercised on any machine that can run
 `npm test`, with no Docker and no database to set up. It runs in CI too.
 
+It finishes by checking the hand-written types in `src/lib/supabase/` against
+the schema it just built: a field in TypeScript with no matching column, or an
+RPC named in `database.ts` that does not exist, fails the run. Those are the
+mistakes that otherwise surface as `undefined` in production rather than as a
+compile error.
+
 `npm run lint` runs ESLint with type-aware rules — floating promises, hook
 dependencies, and `jsx-a11y` — and is gated in CI alongside typecheck, tests,
 and the build.
