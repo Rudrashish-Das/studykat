@@ -8,11 +8,19 @@ import { Notice } from '@/components/ui/Notice'
 import { Cat } from '@/components/cat/Cat'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
 import { candidateAppearances, describeAppearance } from '@/lib/cat/appearance'
-import { guessTimezone, profileKey, useProfile } from '@/lib/queries/profile'
+import { profileKey, useProfile } from '@/lib/queries/profile'
+import { TimeZoneSelect } from '@/components/ui/TimeZoneSelect'
+import { guessTimeZone } from '@/lib/timezones'
 import { requireSupabase } from '@/lib/supabase/client'
 import type { Profile } from '@/lib/supabase/types'
 import { paths } from '@/lib/paths'
 import { cn } from '@/lib/cn'
+import {
+  DAILY_GOAL_MAX,
+  DAILY_GOAL_MIN,
+  clampDailyGoal,
+  streakThresholdMinutes,
+} from '@/lib/economy/coins'
 
 const GOALS = [
   { minutes: 25, label: '25 min', note: 'One session.' },
@@ -29,7 +37,11 @@ export function Onboarding() {
   const [name, setName] = useState('')
   const [variant, setVariant] = useState(0)
   const [goal, setGoal] = useState(60)
-  const [timezone, setTimezone] = useState(guessTimezone)
+  // Tracked separately from `goal` so the field can hold a half-typed number
+  // without the preset chips flickering as you type.
+  const [customGoal, setCustomGoal] = useState('')
+  const usingCustom = !GOALS.some((option) => option.minutes === goal)
+  const [timezone, setTimezone] = useState(guessTimeZone)
   const [error, setError] = useState<string | null>(null)
 
   // The three candidates are a pure function of the account seed, so they are
@@ -116,7 +128,7 @@ export function Onboarding() {
 
         <fieldset>
           <legend className="mb-2 block text-sm font-bold">How long do you want to study each day?</legend>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {GOALS.map((option) => (
               <button
                 key={option.minutes}
@@ -134,29 +146,72 @@ export function Onboarding() {
                 <span className="mt-0.5 block text-xs text-ink-faint">{option.note}</span>
               </button>
             ))}
+            <button
+              type="button"
+              aria-pressed={usingCustom}
+              onClick={() => {
+                // Seed the field from whatever is currently selected, so the
+                // custom option starts from the number you were already on.
+                const start = customGoal || String(goal)
+                setCustomGoal(start)
+                setGoal(clampDailyGoal(Number(start)))
+              }}
+              className={cn(
+                'rounded-xl border-2 px-3 py-3 text-center transition-colors duration-cozy ease-cozy',
+                usingCustom
+                  ? 'border-wood-deep bg-sage-light'
+                  : 'border-ink-line bg-cream-50 hover:border-wood',
+              )}
+            >
+              <span className="block text-sm font-extrabold">Custom</span>
+              <span className="mt-0.5 block text-xs text-ink-faint">Your number.</span>
+            </button>
           </div>
+
+          {usingCustom && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-ink-line bg-cream-50 px-4 py-3">
+              <label htmlFor="custom-goal" className="text-sm font-bold">
+                Minutes a day
+              </label>
+              <input
+                id="custom-goal"
+                type="number"
+                inputMode="numeric"
+                min={DAILY_GOAL_MIN}
+                max={DAILY_GOAL_MAX}
+                step={5}
+                value={customGoal}
+                autoFocus
+                onChange={(e) => {
+                  setCustomGoal(e.target.value)
+                  const parsed = Number(e.target.value)
+                  // Only move the real goal once the field holds something
+                  // usable; an empty or half-typed box should not reset it.
+                  if (e.target.value !== '' && Number.isFinite(parsed)) {
+                    setGoal(clampDailyGoal(parsed))
+                  }
+                }}
+                onBlur={() => setCustomGoal(String(goal))}
+                className="w-28 rounded-lg border border-ink-line bg-paper px-3 py-2 text-ink"
+                aria-describedby="custom-goal-hint"
+              />
+              <span id="custom-goal-hint" className="text-xs text-ink-faint">
+                Between {DAILY_GOAL_MIN} and {DAILY_GOAL_MAX} ({DAILY_GOAL_MAX / 60} hours).
+              </span>
+            </div>
+          )}
+
           <p className="mt-2 text-xs text-ink-faint">
-            A day counts toward your streak at {Math.max(15, Math.ceil(goal / 2))} minutes — half
-            your goal, or fifteen minutes, whichever is more.
+            A day counts toward your streak at {streakThresholdMinutes(goal)} minutes — half your
+            goal, or fifteen minutes, whichever is more.
           </p>
         </fieldset>
 
-        <div>
-          <label htmlFor="tz" className="mb-1.5 block text-sm font-bold">
-            Your timezone
-          </label>
-          <input
-            id="tz"
-            value={timezone}
-            onChange={(e) => setTimezone(e.target.value)}
-            className="w-full rounded-xl border border-ink-line bg-cream-50 px-4 py-2.5"
-            aria-describedby="tz-hint"
-          />
-          <p id="tz-hint" className="mt-1.5 text-xs text-ink-faint">
-            This decides when your day rolls over, so the streak lines up with your actual
-            midnight rather than UTC&apos;s.
-          </p>
-        </div>
+        <TimeZoneSelect
+          value={timezone}
+          onChange={setTimezone}
+          hint="This decides when your day rolls over, so the streak lines up with your actual midnight rather than UTC's."
+        />
 
         {error && <Notice tone="error">{error}</Notice>}
 

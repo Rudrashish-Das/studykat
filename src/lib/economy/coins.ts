@@ -102,6 +102,22 @@ export function computeCoins(input: CoinInput): CoinBreakdown {
   }
 }
 
+/**
+ * Bounds for the daily goal, shared by onboarding and settings.
+ *
+ * The database allows 5-720 (`profiles_goal_range`); the UI stops at eight
+ * hours because past that it is a typo rather than a goal, and the two must not
+ * disagree in the direction that lets the client submit something the database
+ * will reject.
+ */
+export const DAILY_GOAL_MIN = 5
+export const DAILY_GOAL_MAX = 480
+
+export function clampDailyGoal(minutes: number): number {
+  if (!Number.isFinite(minutes)) return 60
+  return Math.min(Math.max(Math.round(minutes), DAILY_GOAL_MIN), DAILY_GOAL_MAX)
+}
+
 /** Minutes that make a day count toward the streak: max(15, half the goal). */
 export function streakThresholdMinutes(dailyGoalMinutes: number): number {
   return Math.max(15, Math.ceil(dailyGoalMinutes / 2))

@@ -12,7 +12,13 @@ import { useAuth } from '@/lib/auth'
 import { signOut } from '@/lib/auth-actions'
 import { requireSupabase } from '@/lib/supabase/client'
 import { paths } from '@/lib/paths'
-import { streakThresholdMinutes } from '@/lib/economy/coins'
+import { TimeZoneSelect } from '@/components/ui/TimeZoneSelect'
+import {
+  DAILY_GOAL_MAX,
+  DAILY_GOAL_MIN,
+  clampDailyGoal,
+  streakThresholdMinutes,
+} from '@/lib/economy/coins'
 
 /**
  * The database rejects a few profile edits on purpose. Say why in a sentence
@@ -131,28 +137,39 @@ export function Settings() {
             <input
               id="goal"
               type="range"
-              min={5}
-              max={300}
+              min={DAILY_GOAL_MIN}
+              max={DAILY_GOAL_MAX}
               step={5}
               value={goal}
               onChange={(e) => setGoal(Number(e.target.value))}
               className="h-2 flex-1 accent-wood-deep"
               aria-describedby="goal-hint"
             />
-            <span className="w-20 text-right text-sm font-extrabold tabular-nums">
-              {goal} min
-            </span>
+            {/* Typable as well as draggable, so a goal picked at onboarding can
+                be reproduced exactly rather than hunted for on the slider. */}
+            <input
+              type="number"
+              inputMode="numeric"
+              min={DAILY_GOAL_MIN}
+              max={DAILY_GOAL_MAX}
+              step={5}
+              value={goal}
+              onChange={(e) => setGoal(clampDailyGoal(Number(e.target.value)))}
+              aria-label="Daily goal in minutes"
+              className="w-24 rounded-lg border border-ink-line bg-cream-50 px-3 py-1.5 text-right text-sm font-extrabold tabular-nums"
+            />
+            <span className="text-sm text-ink-faint">min</span>
           </div>
           <p id="goal-hint" className="mt-1.5 text-xs text-ink-faint">
             A day counts toward your streak at {streakThresholdMinutes(goal)} minutes.
           </p>
         </div>
 
-        <Field
+        <TimeZoneSelect
           label="Timezone"
           value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
-          hint="An IANA name, like Europe/London. This decides when your day rolls over."
+          onChange={setTimezone}
+          hint="This decides when your day rolls over. It can only be changed once a day, because it moves the boundary your streak and daily coin cap are counted against."
         />
 
         <div className="flex items-center justify-between gap-4">

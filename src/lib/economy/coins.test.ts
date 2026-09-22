@@ -1,4 +1,12 @@
-import { computeCoins, streakMultiplier, streakThresholdMinutes, COIN_RULES } from './coins'
+import {
+  computeCoins,
+  streakMultiplier,
+  streakThresholdMinutes,
+  clampDailyGoal,
+  COIN_RULES,
+  DAILY_GOAL_MAX,
+  DAILY_GOAL_MIN,
+} from './coins'
 
 /**
  * Table-driven, and deliberately the same table as the SQL assertions in
@@ -152,5 +160,35 @@ describe('streakThresholdMinutes', () => {
     [120, 60],
   ])('a %i-minute goal needs %i minutes to count', (goal, expected) => {
     expect(streakThresholdMinutes(goal)).toBe(expected)
+  })
+})
+
+describe('clampDailyGoal', () => {
+  it('keeps values inside the range the database accepts', () => {
+    expect(clampDailyGoal(0)).toBe(DAILY_GOAL_MIN)
+    expect(clampDailyGoal(-90)).toBe(DAILY_GOAL_MIN)
+    expect(clampDailyGoal(99999)).toBe(DAILY_GOAL_MAX)
+  })
+
+  it('passes sensible goals through untouched', () => {
+    expect(clampDailyGoal(25)).toBe(25)
+    expect(clampDailyGoal(60)).toBe(60)
+    expect(clampDailyGoal(180)).toBe(180)
+  })
+
+  it('rounds a typed decimal rather than sending it to the database', () => {
+    expect(clampDailyGoal(47.4)).toBe(47)
+    expect(clampDailyGoal(47.6)).toBe(48)
+  })
+
+  it('falls back to the default when the field is empty or garbage', () => {
+    expect(clampDailyGoal(Number(''))).toBe(DAILY_GOAL_MIN) // Number('') is 0
+    expect(clampDailyGoal(Number('abc'))).toBe(60)
+    expect(clampDailyGoal(Infinity)).toBe(60)
+  })
+
+  it('stays inside the database CHECK constraint (5..720)', () => {
+    expect(DAILY_GOAL_MIN).toBeGreaterThanOrEqual(5)
+    expect(DAILY_GOAL_MAX).toBeLessThanOrEqual(720)
   })
 })

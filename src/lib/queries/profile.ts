@@ -51,12 +51,3 @@ export function useUpdateProfile() {
     },
   })
 }
-
-/** The browser's best guess, used only as the default at onboarding. */
-export function guessTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-  } catch {
-    return 'UTC'
-  }
-}
