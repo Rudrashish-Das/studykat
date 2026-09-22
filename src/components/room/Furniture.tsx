@@ -562,21 +562,43 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
 
   tallbox: ({ mat }) => <Box z={54} mat={mat} inset={0.45} />,
 
-  grandfather: ({ mat }) => (
-    <>
-      <Box z={74} mat={mat} inset={0.52} />
-      {/* Face and pendulum, on the left-facing side. Without them this is the
-          plain `tallbox` it used to share with the scratching post. */}
-      <g transform={`translate(${-HX * 0.24}, ${HY * 0.24 - 60})`}>
-        <circle cx="0" cy="0" r="9" fill={mat.accent} strokeWidth="1.4" />
-        <path d="M0 0 L0 -5 M0 0 L4 2" strokeWidth="1.4" fill="none" />
-      </g>
-      <g transform={`translate(${-HX * 0.24}, ${HY * 0.24 - 30})`}>
-        <rect x="-5.5" y="-13" width="11" height="26" rx="2" fill={mat.accent} opacity="0.45" strokeWidth="1.2" />
-        <circle cx="0" cy="7" r="4" fill={mat.accent} strokeWidth="1.2" />
-      </g>
-    </>
-  ),
+  grandfather: ({ mat }) => {
+    // Plinth, a narrower trunk with a pendulum window, a hood holding the dial
+    // and a crown on top. The dial and window are drawn in the plane of the
+    // left face; drawn flat, the old dial hung off the case's top corner.
+    const onFace = (x0: number, y1: number, children: ReactNode) => (
+      <g transform={`translate(${(x0 - y1) * HX}, ${(x0 + y1) * HY}) matrix(1 0.5 0 1 0 0)`}>{children}</g>
+    )
+    const dial = MATERIALS.cream!.top
+    const brass = '#d8b56a'
+    return (
+      <>
+        <Slab x0={0.25} x1={0.75} y0={0.25} y1={0.75} z0={0} z1={10} mat={mat} />
+        <Slab x0={0.31} x1={0.69} y0={0.31} y1={0.69} z0={10} z1={58} mat={mat} />
+        <Slab x0={0.24} x1={0.76} y0={0.24} y1={0.76} z0={58} z1={84} mat={mat} />
+        <Slab x0={0.29} x1={0.71} y0={0.29} y1={0.71} z0={84} z1={90} mat={mat} r={2.5} />
+        {/* Trunk face: 0.38 tiles = 12.2px across. */}
+        {onFace(
+          0.31,
+          0.69,
+          <>
+            <rect x="2.6" y="-53" width="7" height="38" rx="2" fill={mat.right} strokeWidth="1.2" />
+            <path d="M6.1 -51 L6.1 -26" strokeWidth="1.1" fill="none" />
+            <circle cx="6.1" cy="-24" r="2.6" fill={brass} strokeWidth="1.1" />
+          </>,
+        )}
+        {/* Hood face: 0.52 tiles = 16.6px across. */}
+        {onFace(
+          0.24,
+          0.76,
+          <>
+            <circle cx="8.3" cy="-71" r="6.4" fill={dial} strokeWidth="1.3" />
+            <path d="M8.3 -71 L8.3 -75 M8.3 -71 L11 -69.5" strokeWidth="1.1" fill="none" />
+          </>,
+        )}
+      </>
+    )
+  },
 
   piano: ({ w, h, mat }) => (
     <>
