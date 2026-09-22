@@ -112,7 +112,10 @@ export function Home() {
 
       {nudge.show && (
         <Notice className="mt-5">
-          {formatMinutes(nudge.minutesLeft)} left to keep your {summary?.current_streak}-day streak.
+          Study {formatMinutes(nudge.minutesLeft)} more today to{' '}
+          {summary?.current_streak
+            ? `keep your ${summary.current_streak}-day streak.`
+            : 'start a streak.'}
         </Notice>
       )}
 
