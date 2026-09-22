@@ -2,7 +2,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'r
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { TouchTooltips } from '@/components/ui/TouchTooltips'
+import { Tooltips } from '@/components/ui/Tooltips'
 import {
   RedirectIfOnboarded,
   RedirectIfSignedIn,
@@ -41,7 +41,7 @@ export function App() {
       <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <SkipLink />
-          <TouchTooltips />
+          <Tooltips />
           <RecoveryRedirect />
           <Routes>
             {/* Public. Signed-in users are bounced to their room. */}
