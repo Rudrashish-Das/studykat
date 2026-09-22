@@ -89,7 +89,7 @@ export function Shop() {
 
       {/* Categories. Horizontally scrollable on a phone rather than wrapping
           into four rows of chips. */}
-      <div className="-mx-4 mt-5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <div className="sc-no-scrollbar -mx-4 mt-5 overflow-x-auto px-4 [mask-image:linear-gradient(to_right,#000_calc(100%-1rem),transparent)] sm:mx-0 sm:px-0 sm:[mask-image:none]">
         <div role="tablist" aria-label="Categories" className="flex w-max gap-2 pb-1">
           {ORDER.map((key) => (
             <button

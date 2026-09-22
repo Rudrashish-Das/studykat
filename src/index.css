@@ -62,6 +62,15 @@
   .sc-surface {
     @apply rounded-cozy border border-ink-line/70 bg-paper shadow-cozy;
   }
+
+  /* A swipeable row with no scrollbar: the chips cut off at the edge already
+     say there is more, and a bar under them just looks like a stray line. */
+  .sc-no-scrollbar {
+    scrollbar-width: none;
+  }
+  .sc-no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* §9: honour reduced motion globally. Ambient loops stop; state changes stay
