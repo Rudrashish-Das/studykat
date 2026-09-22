@@ -55,7 +55,7 @@ export function Focus() {
 
   if (session.isPending || !session.data || !profile || !appearance) {
     return (
-      <div className="flex min-h-full items-center justify-center bg-night text-cream">
+      <div className="flex min-h-full items-center justify-center bg-night text-moon">
         <FullScreenSpinner label="Settling in" />
       </div>
     )
@@ -82,7 +82,7 @@ export function Focus() {
   }
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center bg-night px-5 py-10 text-cream">
+    <div className="flex min-h-full flex-col items-center justify-center bg-night px-5 py-10 text-moon">
       <div className="w-full max-w-sm text-center">
         <div className="mx-auto w-40 opacity-95 sm:w-48">
           <Cat appearance={appearance} pose="studying" animate={!reducedMotion} />
@@ -98,10 +98,10 @@ export function Focus() {
         </p>
 
         {session.data.label && (
-          <p className="mt-2 text-sm text-cream/70">{session.data.label}</p>
+          <p className="mt-2 text-sm text-moon/70">{session.data.label}</p>
         )}
 
-        <p className="mt-4 text-sm text-cream/60">
+        <p className="mt-4 text-sm text-moon/60">
           {paused ? (
             'Paused. The clock is stopped.'
           ) : belowFloor ? (
@@ -145,7 +145,7 @@ export function Focus() {
         </div>
 
         {confirmStop && belowFloor && (
-          <p className="mt-4 text-sm text-cream/70">
+          <p className="mt-4 text-sm text-moon/70">
             Stopping now earns nothing and will not count toward your streak.{' '}
             <button
               type="button"
@@ -169,7 +169,7 @@ export function Focus() {
           </p>
         )}
 
-        <p className="mt-10 text-xs text-cream/40">
+        <p className="mt-10 text-xs text-moon/40">
           The clock runs on the server. You can close this tab.
         </p>
       </div>

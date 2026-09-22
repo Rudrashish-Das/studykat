@@ -186,7 +186,7 @@ export function GoalRing({
           aria-hidden
           className="shrink-0 -rotate-90"
         >
-          <circle cx="13" cy="13" r={radius} fill="none" stroke="#e3d5bf" strokeWidth="4" />
+          <circle cx="13" cy="13" r={radius} fill="none" strokeWidth="4" className="stroke-ink-line" />
           <circle
             cx="13"
             cy="13"

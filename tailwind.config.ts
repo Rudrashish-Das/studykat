@@ -7,56 +7,52 @@ import type { Config } from 'tailwindcss'
  * Contrast note: body text is `ink` on `cream` (8.99:1) or on `paper`
  * (10.6:1). `ink-soft` on `cream` is 5.6:1. Anything lighter than `ink-soft`
  * is decorative only and must not carry text.
+ *
+ * Dark mode inverts each ramp (light <-> deep) rather than inventing new
+ * pairings, so `bg-wood-deep text-paper` and `bg-sage-light text-ink` keep
+ * their contrast in both themes.
  */
+const v = (name: string) => `rgb(var(--c-${name}) / <alpha-value>)`
+
+const ramp = (name: string) => ({
+  DEFAULT: v(`${name}-mid`),
+  light: v(`${name}-light`),
+  mid: v(`${name}-mid`),
+  dark: v(`${name}-dark`),
+  deep: v(`${name}-deep`),
+})
+
 const config: Config = {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      // Every palette colour is a CSS variable (see index.css) so dark mode is
+      // one class on <html> rather than a `dark:` variant on every component.
       colors: {
         cream: {
-          DEFAULT: '#f6ead8',
-          50: '#fdf9f2',
-          100: '#faf2e6',
-          200: '#f6ead8',
-          300: '#eedcc2',
-          400: '#e3c9a4',
+          DEFAULT: v('cream-200'),
+          50: v('cream-50'),
+          100: v('cream-100'),
+          200: v('cream-200'),
+          300: v('cream-300'),
+          400: v('cream-400'),
         },
-        wood: {
-          DEFAULT: '#c99a6b',
-          light: '#dcb68d',
-          mid: '#c99a6b',
-          dark: '#a67a4f',
-          deep: '#7d5836',
-        },
-        sage: {
-          DEFAULT: '#a7b89b',
-          light: '#c3d0b9',
-          mid: '#a7b89b',
-          dark: '#7f9472',
-          deep: '#5d7052',
-        },
-        rose: {
-          DEFAULT: '#d9a5a0',
-          light: '#ecc7c3',
-          mid: '#d9a5a0',
-          dark: '#b87e78',
-          deep: '#8f5a55',
-        },
-        teal: {
-          DEFAULT: '#7fa8a4',
-          light: '#a8c6c3',
-          mid: '#7fa8a4',
-          dark: '#5d8682',
-          deep: '#43635f',
-        },
+        wood: ramp('wood'),
+        sage: ramp('sage'),
+        rose: ramp('rose'),
+        teal: ramp('teal'),
         ink: {
-          DEFAULT: '#4a3b34',
-          soft: '#6b5a51',
-          faint: '#9c8a7f',
-          line: '#d8c8b4',
+          DEFAULT: v('ink'),
+          soft: v('ink-soft'),
+          faint: v('ink-faint'),
+          line: v('ink-line'),
         },
-        paper: '#fffaf2',
+        paper: v('paper'),
+        // Fixed in both themes: the focus screen is always night, and `moon`
+        // is the text that sits on it.
         night: '#2b2430',
+        moon: '#f6ead8',
       },
       fontFamily: {
         sans: ['Nunito', 'ui-rounded', 'Segoe UI', 'system-ui', 'sans-serif'],
@@ -67,8 +63,8 @@ const config: Config = {
       },
       boxShadow: {
         // Soft, warm, never a hard drop shadow.
-        cozy: '0 8px 24px -12px rgba(74, 59, 52, 0.28)',
-        'cozy-lg': '0 18px 48px -20px rgba(74, 59, 52, 0.35)',
+        cozy: '0 8px 24px -12px rgb(var(--c-shadow) / 0.28)',
+        'cozy-lg': '0 18px 48px -20px rgb(var(--c-shadow) / 0.35)',
         inset: 'inset 0 2px 0 0 rgba(255, 255, 255, 0.5)',
       },
       transitionTimingFunction: {

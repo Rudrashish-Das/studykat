@@ -16,6 +16,17 @@
       rel="stylesheet"
     />
     <title>StudyKat</title>
+    <!-- Pick the theme before first paint so a dark reload never flashes
+         cream. Mirrors src/lib/theme.ts. -->
+    <script>
+      try {
+        var t = localStorage.getItem('studykat:theme')
+        if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1e1916')
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

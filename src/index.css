@@ -3,18 +3,52 @@
 @tailwind utilities;
 
 @layer base {
+  /* The palette, as RGB channels so Tailwind's opacity modifiers
+     (`border-ink-line/70`) keep working. tailwind.config.ts maps every colour
+     class onto these, so the dark block below is the whole of dark mode for
+     the UI. The room, the cat and the landing scene are illustrations with
+     their own fixed art palette and do not follow it. */
   :root {
-    /* Surface + ink tokens, mirrored from tailwind.config.ts so plain CSS
-       (the isometric room's material variables in Phase 5) can use them too. */
-    --sc-cream: #f6ead8;
-    --sc-paper: #fffaf2;
-    --sc-wood: #c99a6b;
-    --sc-sage: #a7b89b;
-    --sc-rose: #d9a5a0;
-    --sc-teal: #7fa8a4;
-    --sc-ink: #4a3b34;
-    --sc-ink-soft: #6b5a51;
-    --sc-ink-line: #d8c8b4;
+    --c-cream-50: 253 249 242;
+    --c-cream-100: 250 242 230;
+    --c-cream-200: 246 234 216;
+    --c-cream-300: 238 220 194;
+    --c-cream-400: 227 201 164;
+    --c-paper: 255 250 242;
+
+    --c-ink: 74 59 52;
+    --c-ink-soft: 107 90 81;
+    --c-ink-faint: 156 138 127;
+    --c-ink-line: 216 200 180;
+
+    --c-wood-light: 220 182 141;
+    --c-wood-mid: 201 154 107;
+    --c-wood-dark: 166 122 79;
+    --c-wood-deep: 125 88 54;
+
+    --c-sage-light: 195 208 185;
+    --c-sage-mid: 167 184 155;
+    --c-sage-dark: 127 148 114;
+    --c-sage-deep: 93 112 82;
+
+    --c-rose-light: 236 199 195;
+    --c-rose-mid: 217 165 160;
+    --c-rose-dark: 184 126 120;
+    --c-rose-deep: 143 90 85;
+
+    --c-teal-light: 168 198 195;
+    --c-teal-mid: 127 168 164;
+    --c-teal-dark: 93 134 130;
+    --c-teal-deep: 67 99 95;
+
+    --c-shadow: 74 59 52;
+
+    /* Stats heatmap, empty to busiest. */
+    --sc-heat-0: #efe6d6;
+    --sc-heat-1: #dcd0b4;
+    --sc-heat-2: #c3cfae;
+    --sc-heat-3: #a7b89b;
+    --sc-heat-4: #7f9472;
 
     /* Isometric constants — the room reads these in Phase 5. */
     --sc-tile-w: 64px;
@@ -25,6 +59,55 @@
     --sc-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 
     color-scheme: light;
+  }
+
+  /* Dark: warm cocoa rather than grey, so it still reads as the same cozy
+     room with the lamp turned down. Surfaces go dark, ink goes light, and each
+     accent ramp flips end for end (light <-> deep) so every existing pairing —
+     `bg-wood-deep text-paper`, `bg-sage-light text-ink` — keeps its contrast.
+     ink on cream is ~14:1, ink-soft on cream ~9:1. */
+  .dark {
+    --c-cream-50: 36 29 26;
+    --c-cream-100: 38 31 27;
+    --c-cream-200: 30 25 22;
+    --c-cream-300: 58 48 42;
+    --c-cream-400: 74 62 54;
+    --c-paper: 42 34 30;
+
+    --c-ink: 243 230 212;
+    --c-ink-soft: 205 188 171;
+    --c-ink-faint: 150 134 120;
+    --c-ink-line: 74 62 55;
+
+    --c-wood-light: 110 80 52;
+    --c-wood-mid: 176 134 92;
+    --c-wood-dark: 208 166 122;
+    --c-wood-deep: 226 192 150;
+
+    --c-sage-light: 70 86 62;
+    --c-sage-mid: 98 118 86;
+    --c-sage-dark: 157 176 143;
+    --c-sage-deep: 195 208 185;
+
+    --c-rose-light: 104 66 62;
+    --c-rose-mid: 143 90 85;
+    --c-rose-dark: 205 150 144;
+    --c-rose-deep: 236 199 195;
+
+    --c-teal-light: 60 90 87;
+    --c-teal-mid: 88 128 124;
+    --c-teal-dark: 140 182 178;
+    --c-teal-deep: 168 198 195;
+
+    --c-shadow: 0 0 0;
+
+    --sc-heat-0: #342b25;
+    --sc-heat-1: #4a4a36;
+    --sc-heat-2: #5d7052;
+    --sc-heat-3: #7f9472;
+    --sc-heat-4: #a7b89b;
+
+    color-scheme: dark;
   }
 
   html,
@@ -38,14 +121,14 @@
     margin: 0;
     /* A soft warm vignette so full-bleed screens never feel flat. */
     background-image:
-      radial-gradient(120% 80% at 50% -10%, #fdf9f2 0%, rgba(253, 249, 242, 0) 60%),
-      radial-gradient(90% 60% at 100% 100%, rgba(167, 184, 155, 0.22) 0%, rgba(167, 184, 155, 0) 70%);
+      radial-gradient(120% 80% at 50% -10%, rgb(var(--c-cream-50)) 0%, rgb(var(--c-cream-50) / 0) 60%),
+      radial-gradient(90% 60% at 100% 100%, rgb(var(--c-sage-mid) / 0.22) 0%, rgb(var(--c-sage-mid) / 0) 70%);
     background-attachment: fixed;
   }
 
   /* Visible, on-palette focus ring for keyboard users (see §9). */
   :focus-visible {
-    outline: 3px solid theme('colors.teal.dark');
+    outline: 3px solid rgb(var(--c-teal-dark));
     outline-offset: 2px;
     border-radius: 6px;
   }

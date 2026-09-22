@@ -13,6 +13,8 @@ import { signOut } from '@/lib/auth-actions'
 import { requireSupabase } from '@/lib/supabase/client'
 import { paths } from '@/lib/paths'
 import { TimeZoneSelect } from '@/components/ui/TimeZoneSelect'
+import { setThemePreference, useThemePreference, type ThemePreference } from '@/lib/theme'
+import { cn } from '@/lib/cn'
 import {
   DAILY_GOAL_MAX,
   DAILY_GOAL_MIN,
@@ -46,6 +48,12 @@ function readSound(): boolean {
   }
 }
 
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+]
+
 export function Settings() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -56,6 +64,7 @@ export function Settings() {
   const [goal, setGoal] = useState(60)
   const [timezone, setTimezone] = useState('UTC')
   const [sound, setSound] = useState(readSound)
+  const theme = useThemePreference()
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState('')
@@ -201,6 +210,34 @@ export function Settings() {
             />
           </button>
         </div>
+
+        <fieldset>
+          <legend className="text-sm font-bold">Appearance</legend>
+          {/* Applies on click, like sound: it is a device preference, not part of
+              the profile the Save button writes. */}
+          <div className="mt-2 inline-flex rounded-pill border border-ink-line/70 bg-cream-50 p-1">
+            {THEME_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className={cn(
+                  'cursor-pointer rounded-pill px-4 py-1.5 text-sm font-bold transition-colors duration-cozy ease-cozy',
+                  'has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-teal-dark',
+                  theme === option.value ? 'bg-sage-light text-ink' : 'text-ink-soft hover:text-ink',
+                )}
+              >
+                <input
+                  type="radio"
+                  name="theme"
+                  value={option.value}
+                  checked={theme === option.value}
+                  onChange={() => setThemePreference(option.value)}
+                  className="sr-only"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         {error && <Notice tone="error">{error}</Notice>}
         {saved && !dirty && <Notice tone="good">Saved.</Notice>}

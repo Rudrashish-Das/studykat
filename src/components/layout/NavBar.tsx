@@ -12,14 +12,18 @@ const links = [
 /**
  * Desktop: a quiet bar across the top. Mobile: the same links pinned to the
  * bottom, per §9 — the HUD and navigation belong under the thumb.
+ *
+ * On a phone it is `fixed`, not `sticky`: a sticky bar is part of the page, so
+ * the browser's overscroll bounce at the bottom dragged it up with the content.
+ * AppShell pads <main> by the bar's height to make room.
  */
 export function NavBar() {
   return (
     <nav
       aria-label="Main"
       className={cn(
-        'sticky bottom-0 z-20 order-last border-t border-ink-line/70 bg-paper/90 backdrop-blur',
-        'sm:bottom-auto sm:top-0 sm:order-first sm:border-b sm:border-t-0',
+        'fixed inset-x-0 bottom-0 z-20 border-t border-ink-line/70 bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur',
+        'sm:sticky sm:bottom-auto sm:top-0 sm:order-first sm:border-b sm:border-t-0 sm:pb-0',
       )}
     >
       <div className="mx-auto flex w-full max-w-5xl items-center gap-1 px-3 py-2 sm:gap-2 sm:px-5 sm:py-3">

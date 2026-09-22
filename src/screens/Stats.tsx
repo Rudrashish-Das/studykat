@@ -106,7 +106,15 @@ function Stat({
   )
 }
 
-const HEAT_STEPS = ['#efe6d6', '#dcd0b4', '#c3cfae', '#a7b89b', '#7f9472'] as const
+// CSS variables so the empty end of the scale sinks into the page in dark mode
+// instead of glaring (index.css).
+const HEAT_STEPS = [
+  'var(--sc-heat-0)',
+  'var(--sc-heat-1)',
+  'var(--sc-heat-2)',
+  'var(--sc-heat-3)',
+  'var(--sc-heat-4)',
+] as const
 
 function heatIndex(seconds: number): number {
   if (seconds <= 0) return 0
