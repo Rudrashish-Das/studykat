@@ -104,3 +104,12 @@ to `/` for a custom domain).
 - Palette, spacing, motion, and the isometric tile constants live in
   `tailwind.config.ts` and `src/index.css`. Components should not hand-roll
   colours.
+
+## Licence
+
+Copyright (c) 2026 Rudrashish Das. All rights reserved — see [LICENSE](LICENSE).
+
+This is a personal project, not an open-source one. The code is readable but not
+licensed for reuse. Bundled dependencies (React, Supabase, TanStack Query,
+Zustand, React Router) remain under their own MIT licences, which the LICENSE
+file records.

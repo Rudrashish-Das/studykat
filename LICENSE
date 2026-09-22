@@ -1,0 +1,47 @@
+Copyright (c) 2026 Rudrashish Das. All rights reserved.
+
+This software and its source code are proprietary. No licence is granted.
+
+You may not copy, modify, merge, publish, distribute, sublicense, sell, or
+create derivative works from any part of this repository, in source or compiled
+form, without prior written permission from the copyright holder.
+
+Being able to read this code — because the repository is visible to you, or
+because the compiled application is served publicly — does not grant any of the
+rights above.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+--------------------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------------------
+
+The terms above cover the original work in this repository only. They do not —
+and cannot — extend to third-party code, which remains under its own licence.
+
+These are bundled into the deployed application:
+
+  react, react-dom                      MIT
+  react-router-dom                      MIT
+  @tanstack/react-query                 MIT
+  zustand                               MIT
+  @supabase/supabase-js                 MIT
+
+The MIT licence requires that its copyright notice and permission notice be
+included in all copies or substantial portions of the software. A production
+build strips comments, so if this application is ever distributed as a product
+rather than served as a personal site, ship the dependency licence texts
+alongside it — `npx license-checker --production` will collect them.
+
+The Nunito typeface is loaded from Google Fonts at runtime and is licensed under
+the SIL Open Font License 1.1. It is not redistributed by this repository.
+
+Build and development tooling (Vite, TypeScript, Tailwind CSS, Vitest, ESLint,
+PGlite and their dependencies) is not distributed with the application and is
+used under each project's own licence.
