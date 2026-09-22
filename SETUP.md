@@ -121,12 +121,18 @@ Then optionally run the assertions in `supabase/tests/` — see the README there
 
 **Authentication → URL Configuration**:
 
-- **Site URL**: `https://<user>.github.io/<repo>/`
-- **Redirect URLs** — add both, exactly:
+- **Site URL**: wherever the site is actually served — `https://<user>.github.io/<repo>/`,
+  or your custom domain if you have one (see §5).
+- **Redirect URLs** — add every origin the app runs on, exactly:
   - `http://localhost:5173`
   - `http://localhost:5173/**`
   - `https://<user>.github.io/<repo>/`
   - `https://<user>.github.io/<repo>/**`
+  - and, with a custom domain, `https://<domain>/` and `https://<domain>/**`
+
+A missing entry here is the usual cause of "login worked yesterday": the app
+asks Supabase to return the user to `window.location.origin`, and Supabase
+silently falls back to the Site URL for any origin not on this list.
 
 The `/**` entries matter: the app uses `HashRouter`, and Supabase returns the
 session in the URL fragment, so the browser lands on a URL like
@@ -187,8 +193,59 @@ step 3.1 above.
 ## 4. Verifying
 
 - Local: `npm run dev`, open <http://localhost:5173>, click through the screens.
-- Deployed: open `https://<user>.github.io/<repo>/`. It should land on the
-  landing screen with the URL becoming `.../#/`. Navigating to
-  `https://<user>.github.io/<repo>/#/stats` directly must load Stats, not a 404.
+- Deployed: open the site at whichever URL serves it — the Pages URL, or your
+  custom domain (§5). It should land on the landing screen with the URL becoming
+  `.../#/`, and going straight to `.../#/stats` must load Stats, not a 404.
+- Deployed, if the page is blank: open the console. Asset 404s mean the build's
+  `base` does not match the path the site is served from — see §5.3.
 - From Phase 2: sign in with Google and confirm you land on `#/home` rather than
   a blank page.
+
+---
+
+## 5. A custom domain (optional)
+
+Currently configured: **studykat.rudrashishdas.com** (`public/CNAME`).
+
+### 5.1 DNS
+
+At the registrar for the parent domain, add one record:
+
+| Type | Host | Value |
+| --- | --- | --- |
+| `CNAME` | `studykat` | `<user>.github.io` |
+
+The value is the **user** site, with no repo path on the end. Verify it before
+touching anything in GitHub:
+
+```bash
+nslookup studykat.rudrashishdas.com
+```
+
+It should end at four addresses in `185.199.108-111.153`.
+
+### 5.2 GitHub
+
+**Settings → Pages → Custom domain**: enter the domain and save.
+
+Tick **Enforce HTTPS** once it stops being greyed out. GitHub issues a Let's
+Encrypt certificate only after DNS validates, so for the first few minutes the
+domain answers on `http` and fails TLS with a name-mismatch error. That is the
+expected sequence, not a misconfiguration.
+
+### 5.3 The part that is easy to miss
+
+A custom domain serves the site from `/`, not from `/<repo>/`. Two consequences:
+
+- **`public/CNAME` must exist**, and must contain the domain and nothing else.
+  A Pages deploy replaces the whole site, so the file has to ship in the build
+  output or the domain setting can be dropped on the next deploy.
+- **The build's `base` must be `/`.** `vite.config.ts` derives it from that same
+  CNAME file, so the two cannot disagree. Get this wrong and the symptom is a
+  blank page: the HTML loads fine and every asset URL 404s.
+
+`npm run build` asserts both (`scripts/check-dist-base.mjs`).
+
+To change the domain, edit `public/CNAME`, update the Pages setting, and add the
+new origin to Supabase's redirect list (§2.4). To drop it, delete the file — the
+build falls back to `/<repo>/` on its own.
