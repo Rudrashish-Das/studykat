@@ -157,7 +157,11 @@ export function Room({
   return (
     <div
       className={cn('relative mx-auto w-full', className)}
-      style={{ maxWidth: ROOM_W, perspective: '1200px' }}
+      // Clip sideways: the object layer is laid out at ROOM_W and scaled down,
+      // and Chrome can keep its unscaled width as page overflow (it does not
+      // recompute it when the scale changes), which let phones scroll sideways.
+      // The margin keeps furniture at the room's corners from being cut off.
+      style={{ maxWidth: ROOM_W, perspective: '1200px', overflowX: 'clip', overflowClipMargin: 16 }}
       onPointerMove={handleMove}
       onPointerLeave={handleLeave}
     >
