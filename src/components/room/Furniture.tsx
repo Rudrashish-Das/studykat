@@ -744,15 +744,47 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </>
   ),
 
-  castle: ({ w, h, mat }) => (
-    <>
-      <Box w={w} h={h} z={40} mat={mat} inset={0.3} />
-      {/* Doorway on the left face. */}
-      <g transform={`translate(${-h * HX * 0.38}, ${h * HY * 0.38 - 8})`}>
-        <path d="M0 0 L0 -16 A 7 7 0 0 1 14 -9 L14 7 Z" fill={OUTLINE} opacity="0.45" stroke="none" />
-      </g>
-    </>
-  ),
+  castle: ({ w, h, mat }) => {
+    const inset = 0.3
+    const wall = 40
+    const lo = inset / 2
+    const merlon = 0.34
+    // Tile-space spot on the footprint → screen offset from its top corner.
+    const at = (i: number, j: number) => `translate(${(i - j) * HX}, ${(i + j) * HY})`
+    // Battlements on the four corners and the middle of the two front edges,
+    // back to front so nearer ones overlap farther ones.
+    const hiW = w - lo - merlon
+    const hiH = h - lo - merlon
+    const midW = (w - merlon) / 2
+    const midH = (h - merlon) / 2
+    const merlons: [number, number][] = [
+      [lo, lo],
+      [hiW, lo],
+      [lo, hiH],
+      [hiW, midH],
+      [midW, hiH],
+      [hiW, hiH],
+    ]
+    return (
+      <>
+        <Box w={w} h={h} z={wall} mat={mat} inset={inset} />
+        {/* Arched doorway, sitting on the floor in the middle of the left face. */}
+        <g transform={at(w / 2, h - lo)}>
+          <path
+            d="M-7 -3.5 L-7 -20 A 8 8 0 0 1 7 -13 L7 3.5 Z"
+            fill={OUTLINE}
+            opacity="0.45"
+            stroke="none"
+          />
+        </g>
+        {merlons.map(([i, j]) => (
+          <g key={`${i}-${j}`} transform={at(i, j)}>
+            <Box w={merlon} h={merlon} z={9} lift={wall} mat={mat} />
+          </g>
+        ))}
+      </>
+    )
+  },
 
   candle: ({ mat }) => (
     <g transform={`translate(0, ${HY})`}>
