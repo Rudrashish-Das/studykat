@@ -19,16 +19,26 @@ import { FullScreenSpinner } from '@/components/ui/Spinner'
 // The signed-in screens carry the room renderer, the cat and all the furniture
 // art, none of which the landing and sign-in pages need. Loading them on
 // demand keeps that out of a first visit's download.
-const Onboarding = lazy(() => import('@/screens/Onboarding').then((m) => ({ default: m.Onboarding })))
-const Home = lazy(() => import('@/screens/Home').then((m) => ({ default: m.Home })))
-const Focus = lazy(() => import('@/screens/Focus').then((m) => ({ default: m.Focus })))
+const screens = {
+  onboarding: () => import('@/screens/Onboarding'),
+  home: () => import('@/screens/Home'),
+  focus: () => import('@/screens/Focus'),
+  sessionComplete: () => import('@/screens/SessionComplete'),
+  shop: () => import('@/screens/Shop'),
+  room: () => import('@/screens/RoomEditor'),
+  stats: () => import('@/screens/Stats'),
+  settings: () => import('@/screens/Settings'),
+}
+const Onboarding = lazy(() => screens.onboarding().then((m) => ({ default: m.Onboarding })))
+const Home = lazy(() => screens.home().then((m) => ({ default: m.Home })))
+const Focus = lazy(() => screens.focus().then((m) => ({ default: m.Focus })))
 const SessionComplete = lazy(() =>
-  import('@/screens/SessionComplete').then((m) => ({ default: m.SessionComplete })),
+  screens.sessionComplete().then((m) => ({ default: m.SessionComplete })),
 )
-const Shop = lazy(() => import('@/screens/Shop').then((m) => ({ default: m.Shop })))
-const RoomEditor = lazy(() => import('@/screens/RoomEditor').then((m) => ({ default: m.RoomEditor })))
-const Stats = lazy(() => import('@/screens/Stats').then((m) => ({ default: m.Stats })))
-const Settings = lazy(() => import('@/screens/Settings').then((m) => ({ default: m.Settings })))
+const Shop = lazy(() => screens.shop().then((m) => ({ default: m.Shop })))
+const RoomEditor = lazy(() => screens.room().then((m) => ({ default: m.RoomEditor })))
+const Stats = lazy(() => screens.stats().then((m) => ({ default: m.Stats })))
+const Settings = lazy(() => screens.settings().then((m) => ({ default: m.Settings })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +60,7 @@ export function App() {
           <SkipLink />
           <Tooltips />
           <RecoveryRedirect />
+          <PreloadScreens />
           <Suspense fallback={<FullScreenSpinner label="Loading" />}>
             <Routes>
               {/* Public. Signed-in users are bounced to their room. */}
@@ -121,6 +132,32 @@ function SkipLink() {
       Skip to content
     </a>
   )
+}
+
+/**
+ * Once someone is signed in, fetch the rest of the screens while the browser is
+ * idle. A route change waits for its screen's code, and holds the old screen —
+ * nav highlight and all — until it arrives, so switching tabs felt laggy
+ * whenever that code was not already here.
+ */
+function PreloadScreens() {
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (!user) return
+    const preload = () => {
+      for (const load of Object.values(screens)) void load().catch(() => undefined)
+    }
+    // Safari has no requestIdleCallback.
+    if (typeof window.requestIdleCallback === 'function') {
+      const id = window.requestIdleCallback(preload, { timeout: 3000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const id = window.setTimeout(preload, 1500)
+    return () => window.clearTimeout(id)
+  }, [user])
+
+  return null
 }
 
 /**
