@@ -1,5 +1,5 @@
 -- 0005_catalog_seed.sql
--- The shop. 53 items.
+-- The shop. 54 items.
 --
 -- Price curve: a 25-minute session pays about 26 coins, so the cheapest items
 -- (40-90) are two sessions away and land in week one. The mid tier (150-800)
@@ -59,6 +59,7 @@ values
 
   -- ---------------------------------------------------------------- plants
   ('succulent',        'Succulent',         'Survives anything, including you.',           'plant',     70,   null,                                      1, 1, 2, 'succulent/sage',       10),
+  ('cactus',           'Cactus',            'Prickly, but means well.',                    'plant',     110,  null,                                      1, 1, 2, 'cactus/oak',           15),
   ('fern',             'Fern',              'Dramatic about water.',                       'plant',     160,  null,                                      1, 1, 2, 'fern/teal',            20),
   ('monstera',         'Monstera',          'Holes on purpose.',                           'plant',     340,  null,                                      1, 1, 2, 'monstera/sage',        30),
   ('olive-tree',       'Olive tree',        'Will not fruit indoors. Try anyway.',         'plant',     720,  null,                                      1, 1, 2, 'olive/oak',            40),

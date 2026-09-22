@@ -616,6 +616,23 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </>
   ),
 
+  cactus: ({ mat }) => (
+    <>
+      <Pot mat={mat} z={14} inset={0.6} />
+      <g transform={`translate(0, ${HY - 14})`} strokeWidth="1.4">
+        {/* Two arms behind the column, bending up like a saguaro. */}
+        <path d="M-5 -16 L-11 -16 A3.5 3.5 0 0 1 -14.5 -19.5 L-14.5 -26 A3.5 3.5 0 0 1 -7.5 -26 L-7.5 -21 L-5 -21 Z" fill={LEAF.light} />
+        <path d="M5 -22 L10 -22 A3.5 3.5 0 0 0 13.5 -25.5 L13.5 -31 A3.5 3.5 0 0 0 6.5 -31 L6.5 -27 L5 -27 Z" fill={LEAF.light} />
+        {/* The column: straight sides and a rounded top. */}
+        <path d="M-6 0 L-6 -32 A6 6 0 0 1 6 -32 L6 0 Z" fill={LEAF.mid} />
+        <path d="M-2 -2 L-2 -33 M2 -2 L2 -33" stroke={LEAF.dark} strokeWidth="1" opacity="0.8" />
+        {/* A few spines and one pink flower on top. */}
+        <path d="M-6 -12 L-8.5 -13 M6 -18 L8.5 -19 M-6 -26 L-8.5 -27 M6 -8 L8.5 -9" strokeWidth="1" />
+        <circle cx="0" cy="-38" r="2.8" fill="#e6a9a3" strokeWidth="1.1" />
+      </g>
+    </>
+  ),
+
   fern: ({ mat }) => (
     <>
       <Pot mat={mat} z={16} inset={0.62} />
