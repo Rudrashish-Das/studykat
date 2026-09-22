@@ -25,6 +25,9 @@ const ramp = (name: string) => ({
 const config: Config = {
   darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // Touch screens keep :hover on whatever was tapped last, which made the last
+  // tapped chip look selected. Only apply hover styles where there is a mouse.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       // Every palette colour is a CSS variable (see index.css) so dark mode is
