@@ -81,6 +81,7 @@ function Box({
   insetW,
   insetH,
   opacity,
+  r = CORNER,
 }: {
   w?: number
   h?: number
@@ -97,6 +98,8 @@ function Box({
   insetW?: number
   insetH?: number
   opacity?: number
+  /** Corner softening; cushions and pillows want more than the default. */
+  r?: number
 }) {
   const scaleW = Math.max(0.05, w - (insetW ?? inset))
   const scaleH = Math.max(0.05, h - (insetH ?? inset))
@@ -113,19 +116,53 @@ function Box({
     <g opacity={opacity}>
       {/* Left face — mid tone */}
       <path
-        d={rounded([shift(c.l, top), shift(c.b, top), shift(c.b, base), shift(c.l, base)])}
+        d={rounded([shift(c.l, top), shift(c.b, top), shift(c.b, base), shift(c.l, base)], r)}
         fill={mat.left}
       />
       {/* Right face — darkest */}
       <path
-        d={rounded([shift(c.b, top), shift(c.r, top), shift(c.r, base), shift(c.b, base)])}
+        d={rounded([shift(c.b, top), shift(c.r, top), shift(c.r, base), shift(c.b, base)], r)}
         fill={mat.right}
       />
       {/* Top face — lightest */}
       <path
-        d={rounded([shift(c.t, top), shift(c.r, top), shift(c.b, top), shift(c.l, top)])}
+        d={rounded([shift(c.t, top), shift(c.r, top), shift(c.b, top), shift(c.l, top)], r)}
         fill={mat.top}
       />
+    </g>
+  )
+}
+
+/**
+ * A box filling [x0, x1] x [y0, y1] of the footprint, from z0 up to z1 px.
+ *
+ * Insets centre a part and then translate it, which is fine for one tabletop
+ * but loses track of where things are once a piece has six parts: the old sofa
+ * and bed had cushions hanging off their frames. Saying where a part sits is
+ * easier to get right, and to draw far-to-near.
+ */
+function Slab({
+  x0,
+  x1,
+  y0,
+  y1,
+  z0,
+  z1,
+  mat,
+  r = CORNER,
+}: {
+  x0: number
+  x1: number
+  y0: number
+  y1: number
+  z0: number
+  z1: number
+  mat: Material
+  r?: number
+}) {
+  return (
+    <g transform={`translate(${(x0 - y0) * HX}, ${(x0 + y0) * HY})`}>
+      <Box w={x1 - x0} h={y1 - y0} z={z1 - z0} lift={z0} mat={mat} r={r} />
     </g>
   )
 }
@@ -418,74 +455,60 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
   ),
 
   sofa: ({ w, h, mat }) => {
-    // A back along the long side and an arm at each end. Three stacked slabs of
-    // decreasing size — which is what this was — reads as a staircase.
-    const armW = 0.34
-    const armAt = (w - armW) / 2
-    const backAt = (h - 0.26) / 2
+    // Arms at both ends running the full depth, a back between them, and two
+    // seat cushions with a back cushion each — drawn far-to-near, so nothing
+    // floats or pokes through a nearer part. `along` follows the long side
+    // whichever way the sofa is turned; the back is on the far edge.
+    const long = Math.max(w, h)
+    const at = (a0: number, a1: number, d0: number, d1: number) =>
+      w >= h ? { x0: a0, x1: a1, y0: d0, y1: d1 } : { x0: d0, x1: d1, y0: a0, y1: a1 }
+    const arm = 0.3
+    const lo = 0.08
+    const hi = long - 0.08
+    const mid = long / 2
+    const cushions: [number, number][] = [
+      [lo + arm + 0.02, mid - 0.02],
+      [mid + 0.02, hi - arm - 0.02],
+    ]
     return (
       <>
-        <Box w={w} h={h} z={11} mat={mat} inset={0.22} />
-        {/* Two seat cushions */}
-        {[-1, 1].map((s) => (
-          <g key={s} transform={`translate(${((s * (w - armW * 2)) / 4) * HX}, ${((s * (w - armW * 2)) / 4) * HY})`}>
-            <Box
-              w={w}
-              h={h}
-              z={9}
-              lift={11}
-              mat={{ ...mat, top: mat.accent }}
-              insetW={w - (w - armW * 2) / 2 + 0.14}
-              insetH={h - 0.46}
-            />
+        <Slab {...at(lo, lo + arm, 0.1, 0.92)} z0={0} z1={24} mat={mat} r={5} />
+        <Slab {...at(lo + arm, hi - arm, 0.1, 0.3)} z0={0} z1={36} mat={mat} r={5} />
+        <Slab {...at(lo + arm, hi - arm, 0.3, 0.9)} z0={0} z1={11} mat={mat} />
+        {cushions.map(([a0, a1]) => (
+          <g key={a0}>
+            <Slab {...at(a0, a1, 0.3, 0.46)} z0={11} z1={33} mat={mat} r={6} />
+            <Slab {...at(a0, a1, 0.46, 0.9)} z0={11} z1={19} mat={mat} r={5} />
           </g>
         ))}
-        {/* Back, set against the far long edge */}
-        <g transform={`translate(${backAt * HX}, ${-backAt * HY})`}>
-          <Box w={w} h={h} z={28} lift={11} mat={mat} insetW={w - (w - 0.16)} insetH={h - 0.26} />
-        </g>
-        {/* An arm at each end */}
-        {[-1, 1].map((s) => (
-          <g key={s} transform={`translate(${s * armAt * HX}, ${s * armAt * HY})`}>
-            <Box w={w} h={h} z={18} lift={11} mat={mat} insetW={w - armW} insetH={h - 0.82} />
-          </g>
-        ))}
+        <Slab {...at(hi - arm, hi, 0.1, 0.92)} z0={0} z1={24} mat={mat} r={5} />
       </>
     )
   },
 
-  bed: ({ w, h, mat }) => {
-    const linen = { top: '#fffaf2', left: '#f0e2cd', right: '#dccbb0', accent: mat.accent }
-    /** Shift a part `alongX` down-right and `towardHead` up-right. */
-    const at = (alongX: number, towardHead: number) =>
-      `translate(${(alongX + towardHead) * HX}, ${(alongX - towardHead) * HY})`
+  bed: ({ w, h, mat, material }) => {
+    // A wooden frame with its headboard on the far edge, a mattress, two
+    // pillows and a duvet turned down below them. The material is the bedding;
+    // cream sheets on a cream frame under a brown duvet read as a pale slab
+    // with a plank on it.
+    const wood = MATERIALS.oak!
+    const linen = MATERIALS.cream!
+    const fold = { ...linen, top: '#fffaf2' }
+    const duvet = material === 'cream' ? MATERIALS.sage! : mat
+    const x1 = w - 0.08
     return (
       <>
-        {/* Frame, then mattress, then a duvet that stops short of the pillows.
-            Without the turn-down this was a slab with a white brick on it. */}
-        <Box w={w} h={h} z={13} mat={mat} inset={0.18} />
-        <Box w={w} h={h} z={8} lift={13} mat={linen} inset={0.3} />
-        <g transform={at(0, -0.34)}>
-          <Box
-            w={w}
-            h={h}
-            z={7}
-            lift={21}
-            mat={{ ...mat, top: mat.accent, left: mat.accent }}
-            insetW={0.38}
-            insetH={h - (h - 0.3) * 0.6}
-          />
-        </g>
-        {/* Two pillows at the head */}
-        {[-1, 1].map((side) => (
-          <g key={side} transform={at(side * 0.42, 0.56)}>
-            <Box w={w} h={h} z={7} lift={21} mat={linen} insetW={w - 0.62} insetH={h - 0.42} />
-          </g>
+        <Slab x0={0.06} x1={w - 0.06} y0={0.06} y1={0.24} z0={0} z1={46} mat={wood} r={5} />
+        <Slab x0={0.08} x1={x1} y0={0.24} y1={h - 0.08} z0={0} z1={12} mat={wood} />
+        <Slab x0={0.14} x1={x1 - 0.06} y0={0.26} y1={h - 0.14} z0={12} z1={21} mat={linen} r={4} />
+        {[
+          [0.3, w / 2 - 0.08],
+          [w / 2 + 0.08, w - 0.3],
+        ].map(([p0 = 0, p1 = 0]) => (
+          <Slab key={p0} x0={p0} x1={p1} y0={0.34} y1={0.68} z0={21} z1={29} mat={fold} r={7} />
         ))}
-        {/* Headboard */}
-        <g transform={at(0, (h - 0.2) / 2)}>
-          <Box w={w} h={h} z={34} mat={mat} insetW={0.18} insetH={h - 0.2} />
-        </g>
+        <Slab x0={0.1} x1={x1 - 0.02} y0={0.84} y1={h - 0.1} z0={9} z1={25} mat={duvet} r={5} />
+        <Slab x0={0.1} x1={x1 - 0.02} y0={0.84} y1={1.06} z0={25} z1={27} mat={fold} r={2} />
       </>
     )
   },
