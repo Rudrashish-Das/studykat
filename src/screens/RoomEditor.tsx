@@ -15,7 +15,7 @@ import {
 } from '@/lib/queries/room'
 import { useCatAppearance } from '@/lib/cat/useCatAppearance'
 import { useCatWander } from '@/lib/cat/useCatWander'
-import { GRID_SIZE, canPlace, type Placement } from '@/lib/iso/projection'
+import { GRID_SIZE, WALL_LAYER, canPlace, wallSpotOf, type Placement } from '@/lib/iso/projection'
 import { cn } from '@/lib/cn'
 import type { CatalogItem } from '@/lib/supabase/types'
 
@@ -67,9 +67,29 @@ export function RoomEditor() {
     [placed],
   )
 
+  /** Where wall items already hang, one per wall tile. */
+  const hung = useMemo(
+    () =>
+      placed
+        .filter((p) => p.item.layer === WALL_LAYER)
+        .map((p) => ({ id: p.id, ...wallSpotOf(p.grid_x, p.grid_y) })),
+    [placed],
+  )
+
   const tryMove = useCallback(
     (gx: number, gy: number, rotation?: number) => {
       if (!selected) return
+      if (selected.item.layer === WALL_LAYER) {
+        // Wall items go on the wall nearest the click, never out on the floor.
+        const spot = wallSpotOf(gx, gy)
+        if (!wallSpotFree(hung, spot, selected.id)) {
+          setError('Something already hangs there.')
+          return
+        }
+        setError(null)
+        moveItem.mutate({ id: selected.id, gx: spot.gx, gy: spot.gy, rotation: rotation ?? selected.rotation })
+        return
+      }
       const candidate: Placement = {
         id: selected.id,
         gx,
@@ -87,7 +107,7 @@ export function RoomEditor() {
       setError(null)
       moveItem.mutate({ id: selected.id, gx, gy, rotation: candidate.rotation })
     },
-    [selected, placements, moveItem],
+    [selected, placements, hung, moveItem],
   )
 
   // Keyboard placement.
@@ -126,8 +146,19 @@ export function RoomEditor() {
     return <FullScreenSpinner label="Moving the furniture" />
   }
 
+  const hoverWall = selected?.item.layer === WALL_LAYER && hoverTile ? wallSpotOf(hoverTile.gx, hoverTile.gy) : null
   const ghost =
-    selected && hoverTile
+    selected && hoverWall
+      ? {
+          artKey: selected.item.art_key,
+          gx: hoverWall.gx,
+          gy: hoverWall.gy,
+          w: selected.item.footprint_w,
+          h: selected.item.footprint_h,
+          rotation: selected.rotation,
+          valid: wallSpotFree(hung, hoverWall, selected.id),
+        }
+      : selected && hoverTile
       ? {
           artKey: selected.item.art_key,
           gx: hoverTile.gx,
@@ -225,7 +256,8 @@ export function RoomEditor() {
                   )}
                   onClick={() => {
                     // Drop it on the first free tile, then let the user move it.
-                    const spot = firstFreeTile(placements, item)
+                    const spot =
+                      item.layer === WALL_LAYER ? firstFreeWallTile(hung) : firstFreeTile(placements, item)
                     if (!spot) {
                       setError('No room for that until you move something.')
                       return
@@ -252,6 +284,26 @@ export function RoomEditor() {
       </section>
     </div>
   )
+}
+
+interface Hung {
+  id: string
+  gx: number
+  gy: number
+}
+
+function wallSpotFree(hung: Hung[], spot: { gx: number; gy: number }, ignoreId?: string): boolean {
+  return !hung.some((h) => h.id !== ignoreId && h.gx === spot.gx && h.gy === spot.gy)
+}
+
+/** The first empty wall tile, working out from the back corner along each wall in turn. */
+function firstFreeWallTile(hung: Hung[]): { gx: number; gy: number } | null {
+  for (let i = 1; i < GRID_SIZE; i += 1) {
+    for (const spot of [wallSpotOf(i, 0), wallSpotOf(0, i)]) {
+      if (wallSpotFree(hung, spot)) return { gx: spot.gx, gy: spot.gy }
+    }
+  }
+  return wallSpotFree(hung, { gx: 0, gy: 0 }) ? { gx: 0, gy: 0 } : null
 }
 
 function firstFreeTile(

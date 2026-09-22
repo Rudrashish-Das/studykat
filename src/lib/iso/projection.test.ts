@@ -16,6 +16,7 @@ import {
   tileDiamond,
   toGrid,
   toScreen,
+  wallSpotOf,
   type Drawable,
   type Placement,
 } from './projection'
@@ -209,6 +210,28 @@ describe('depth sorting', () => {
     expect(depthSort([d('cat', 2, 3), bookcase]).map((x) => x.id)).toEqual(['cat', 'bookcase'])
     // In front of it.
     expect(depthSort([d('cat', 6, 5), bookcase]).map((x) => x.id)).toEqual(['bookcase', 'cat'])
+  })
+
+  it('paints wall-mounted things before anything on the floor', () => {
+    // A poster further along the wall than a chair is still behind it.
+    const sorted = depthSort([d('chair', 1, 0), d('poster', 6, 0, 3)])
+    expect(sorted.map((x) => x.id)).toEqual(['poster', 'chair'])
+  })
+})
+
+describe('wallSpotOf', () => {
+  it('keeps a wall tile where it is', () => {
+    expect(wallSpotOf(4, 0)).toEqual({ side: 'right', index: 4, gx: 4, gy: 0 })
+    expect(wallSpotOf(0, 6)).toEqual({ side: 'left', index: 6, gx: 0, gy: 6 })
+  })
+
+  it('gives the back corner to the right-hand wall', () => {
+    expect(wallSpotOf(0, 0).side).toBe('right')
+  })
+
+  it('snaps a tile out on the floor to the nearer wall, so nothing hangs in mid-air', () => {
+    expect(wallSpotOf(7, 2)).toEqual({ side: 'right', index: 7, gx: 7, gy: 0 })
+    expect(wallSpotOf(2, 7)).toEqual({ side: 'left', index: 7, gx: 0, gy: 7 })
   })
 })
 

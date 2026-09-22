@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from 'react'
-import { TILE_H, TILE_W, rotatedFootprint } from '@/lib/iso/projection'
+import { GRID_SIZE, TILE_H, TILE_W, rotatedFootprint, type WallSide } from '@/lib/iso/projection'
 import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey, type Material } from './materials'
 
 /**
@@ -154,46 +154,108 @@ function ContactShadow({ w, h }: { w: number; h: number }) {
   )
 }
 
-/** A billboard hung on the back wall, skewed to sit flat against it. */
+/**
+ * Lays its children flat onto a back wall. Wall shapes are drawn face-on, x
+ * across and y up, with (0,0) where the wall meets the floor under the item;
+ * the shear puts them in the wall's plane. The right-hand wall recedes half a
+ * pixel down for every pixel across, the left one half a pixel up.
+ */
+function OnWall({ side, children }: { side: WallSide; children: ReactNode }) {
+  return <g transform={`matrix(1 ${side === 'left' ? -0.5 : 0.5} 0 1 0 0)`}>{children}</g>
+}
+
+/** A rectangle hung on a wall — a poster, a frame — its top `lift` px up. */
 function WallPanel({
+  side,
   width,
   height,
   lift,
   fill,
   accent,
 }: {
+  side: WallSide
   width: number
   height: number
   lift: number
   fill: string
   accent?: string
 }) {
-  // The right-hand wall recedes at the isometric angle, so a rectangle on it
-  // shears by half a pixel down for every pixel across.
-  const x0 = -width / 2
-  const pts: Pt[] = [
-    { x: x0, y: -lift + x0 / 2 },
-    { x: x0 + width, y: -lift + (x0 + width) / 2 },
-    { x: x0 + width, y: -lift + height + (x0 + width) / 2 },
-    { x: x0, y: -lift + height + x0 / 2 },
+  const quad = (x0: number, y0: number, x1: number, y1: number): Pt[] => [
+    { x: x0, y: y0 },
+    { x: x1, y: y0 },
+    { x: x1, y: y1 },
+    { x: x0, y: y1 },
   ]
+  const x0 = -width / 2
+  const y0 = -lift
   return (
-    <g>
-      <path d={rounded(pts)} fill={fill} />
+    <OnWall side={side}>
+      <path d={rounded(quad(x0, y0, x0 + width, y0 + height))} fill={fill} />
       {accent && (
         <path
-          d={rounded([
-            { x: pts[0]!.x + 5, y: pts[0]!.y + 5 },
-            { x: pts[1]!.x - 5, y: pts[1]!.y + 5 },
-            { x: pts[2]!.x - 5, y: pts[2]!.y - 5 },
-            { x: pts[3]!.x + 5, y: pts[3]!.y - 5 },
-          ])}
+          d={rounded(quad(x0 + 5, y0 + 5, x0 + width - 5, y0 + height - 5))}
           fill={accent}
           strokeWidth="1.4"
         />
       )}
+    </OnWall>
+  )
+}
+
+/**
+ * A box standing out from a wall — a shelf, a planter — `along` tiles long and
+ * `depth` tiles deep, centred on the wall anchor, its underside `lift` px up.
+ *
+ * For the left wall it is rebuilt with its axes swapped rather than mirrored,
+ * so the light still falls the same way it does on everything else.
+ */
+function WallBox({
+  side,
+  along,
+  depth,
+  z,
+  lift,
+  mat,
+}: {
+  side: WallSide
+  along: number
+  depth: number
+  z: number
+  lift: number
+  mat: Material
+}) {
+  // The box's top corner sits on the wall, half its length back from the anchor.
+  const backX = side === 'right' ? (-along / 2) * HX : (along / 2) * HX
+  const backY = (-along / 2) * HY
+  const [w, h] = side === 'right' ? [along, depth] : [depth, along]
+  return (
+    <g transform={`translate(${backX}, ${backY})`}>
+      <Box w={w} h={h} z={z} lift={lift} mat={mat} />
     </g>
   )
+}
+
+/** The middle of a WallBox's top face, relative to the wall anchor. */
+function wallBoxTop(side: WallSide, depth: number, top: number): Pt {
+  // Half the depth out from the wall, toward the viewer: down-left off the
+  // right-hand wall, down-right off the left one.
+  return { x: (side === 'right' ? -1 : 1) * (depth / 2) * HX, y: (depth / 2) * HY - top }
+}
+
+/**
+ * How far each wall shape reaches either side of its anchor, in screen pixels
+ * across. Being in this table is what makes a shape wall-mounted. A wide piece
+ * near either end of a wall is slid along it until it fits, rather than
+ * hanging off the room's corner into thin air.
+ */
+const WALL_REACH: Record<string, number> = {
+  poster: 20,
+  frame: 21,
+  starmap: 26,
+  clock: 15,
+  trophyshelf: 18,
+  fairylights: 50,
+  windowbox: 22,
 }
 
 /**
@@ -295,7 +357,14 @@ function Pot({ mat, z, inset }: { mat: Material; z: number; inset: number }) {
   return <Box z={z} mat={mat} inset={inset} />
 }
 
-interface ShapeProps { w: number; h: number; mat: Material; material: string }
+interface ShapeProps {
+  w: number
+  h: number
+  mat: Material
+  material: string
+  /** Which back wall a wall-mounted shape hangs on; floor shapes ignore it. */
+  side: WallSide
+}
 
 const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
   'box-low': ({ mat }) => <Box z={16} mat={mat} inset={0.15} />,
@@ -724,13 +793,15 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </g>
   ),
 
-  fairylights: ({ mat }) => (
-    <g transform={`translate(0, -66)`}>
-      <path d="M-46 -18 Q 0 6 46 -18" fill="none" strokeWidth="1.6" />
-      {[-38, -22, -6, 10, 26, 40].map((x, i) => (
-        <circle key={x} cx={x} cy={-13 + (i % 2 === 0 ? 5 : 8)} r="3.4" fill="#f5cf7a" stroke={mat.right} strokeWidth="1" />
-      ))}
-    </g>
+  fairylights: ({ mat, side }) => (
+    <OnWall side={side}>
+      <g transform="translate(0, -70)">
+        <path d="M-46 -18 Q 0 6 46 -18" fill="none" strokeWidth="1.6" />
+        {[-38, -22, -6, 10, 26, 40].map((x, i) => (
+          <circle key={x} cx={x} cy={-13 + (i % 2 === 0 ? 5 : 8)} r="3.4" fill="#f5cf7a" stroke={mat.right} strokeWidth="1" />
+        ))}
+      </g>
+    </OnWall>
   ),
 
   bookstack: ({ mat }) => (
@@ -750,31 +821,73 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </g>
   ),
 
-  poster: ({ mat }) => <WallPanel width={38} height={48} lift={78} fill={mat.left} accent={mat.accent} />,
-  frame: ({ mat }) => <WallPanel width={40} height={32} lift={74} fill={mat.right} accent={mat.accent} />,
-  starmap: ({ mat }) => <WallPanel width={50} height={38} lift={80} fill={mat.right} accent="#7fa8c4" />,
-
-  clock: ({ mat }) => (
-    <g transform={`translate(0, -84)`}>
-      <circle cx="0" cy="0" r="16" fill={mat.top} />
-      <circle cx="0" cy="0" r="11" fill={mat.accent} strokeWidth="1.2" />
-      <path d="M0 0 L0 -7 M0 0 L5 2" strokeWidth="1.6" fill="none" />
-    </g>
+  /*
+   * Wall shapes are drawn about the middle of their tile's wall edge (the
+   * `Furniture` wrapper moves them there) and stay under the wall's 96px top.
+   */
+  poster: ({ mat, side }) => (
+    <WallPanel side={side} width={38} height={48} lift={80} fill={mat.left} accent={mat.accent} />
+  ),
+  frame: ({ mat, side }) => (
+    <WallPanel side={side} width={40} height={32} lift={72} fill={mat.right} accent={mat.accent} />
+  ),
+  starmap: ({ mat, side }) => (
+    <WallPanel side={side} width={50} height={38} lift={78} fill={mat.right} accent="#7fa8c4" />
   ),
 
-  windowbox: ({ mat }) => (
-    <g transform={`translate(0, -56)`}>
-      <Box z={12} mat={mat} inset={0.35} />
-      <ellipse cx="-8" cy="-14" rx="7" ry="5" fill="#d9a5a0" />
-      <ellipse cx="6" cy="-16" rx="6" ry="4.5" fill="#ecc7c3" />
-    </g>
+  clock: ({ mat, side }) => (
+    <OnWall side={side}>
+      <g transform="translate(0, -68)">
+        <circle cx="0" cy="0" r="14" fill={mat.top} />
+        <circle cx="0" cy="0" r="9.5" fill={mat.accent} strokeWidth="1.2" />
+        <path d="M0 0 L0 -6 M0 0 L4.5 2" strokeWidth="1.6" fill="none" />
+      </g>
+    </OnWall>
   ),
 
-  trophyshelf: ({ mat }) => (
-    <g transform={`translate(0, -70)`}>
-      <WallPanel width={54} height={8} lift={0} fill={mat.left} />
-    </g>
-  ),
+  windowbox: ({ mat, side }) => {
+    // A window with the planter on its sill, so the box has something to hang from.
+    const flowers = wallBoxTop(side, 0.42, 42)
+    return (
+      <g>
+        <OnWall side={side}>
+          <path
+            d={rounded([{ x: -20, y: -86 }, { x: 20, y: -86 }, { x: 20, y: -40 }, { x: -20, y: -40 }])}
+            fill={MATERIALS.oak!.top}
+          />
+          <path
+            d={rounded([{ x: -15, y: -81 }, { x: 15, y: -81 }, { x: 15, y: -44 }, { x: -15, y: -44 }], 2)}
+            fill="#cfe0e6"
+            strokeWidth="1.4"
+          />
+          <path d="M0 -81 L0 -44 M-15 -62 L15 -62" strokeWidth="1.4" fill="none" />
+        </OnWall>
+        <WallBox side={side} along={1.3} depth={0.42} z={12} lift={30} mat={mat} />
+        <ellipse cx={flowers.x - 8} cy={flowers.y - 2} rx="7" ry="5" fill="#d9a5a0" />
+        <ellipse cx={flowers.x + 7} cy={flowers.y - 3} rx="6" ry="4.5" fill="#ecc7c3" />
+        <ellipse cx={flowers.x} cy={flowers.y} rx="5" ry="3.5" fill={LEAF.mid} />
+      </g>
+    )
+  },
+
+  trophyshelf: ({ mat, side }) => {
+    const cup = wallBoxTop(side, 0.45, 58)
+    return (
+      <g>
+        {/* Brackets first, so the board sits on them. */}
+        <OnWall side={side}>
+          <path d="M-9 -52 L-9 -40 L-3 -52 Z M9 -52 L9 -40 L3 -52 Z" fill={mat.right} strokeWidth="1.2" />
+        </OnWall>
+        <WallBox side={side} along={1} depth={0.45} z={6} lift={52} mat={mat} />
+        {/* A small cup on it, so it reads as a shelf and not a plank. */}
+        <g transform={`translate(${cup.x}, ${cup.y})`}>
+          <path d="M-4 0 L4 0 L2.5 -3 L-2.5 -3 Z" fill="#c9a24d" strokeWidth="1.2" />
+          <path d="M-1 -3 L1 -3 L1 -6 L-1 -6 Z" fill="#c9a24d" strokeWidth="1" />
+          <path d="M-6 -13 L6 -13 Q 6 -6 0 -6 Q -6 -6 -6 -13 Z" fill="#e4bf62" strokeWidth="1.2" />
+        </g>
+      </g>
+    )
+  },
 
   /*
    * Floors and walls are not objects. The room paints them across its whole
@@ -844,12 +957,22 @@ export const Furniture = memo(function Furniture({
   rotation = 0,
   shadow = true,
   ghost,
+  wallSide = 'right',
+  wallIndex,
 }: {
   artKey: string
   footprintW?: number
   footprintH?: number
   rotation?: number
   shadow?: boolean
+  /** Wall-mounted shapes only: which back wall the tile is against. */
+  wallSide?: WallSide
+  /**
+   * Wall-mounted shapes only: the tile's place along that wall, so a wide piece
+   * at either end can be slid in off the corner. Left out for a lone preview,
+   * where there is no corner to run into.
+   */
+  wallIndex?: number
   /** 'valid' shows a translucent preview, 'invalid' tints it. */
   ghost?: 'valid' | 'invalid'
 }) {
@@ -858,12 +981,24 @@ export const Furniture = memo(function Furniture({
   const size = rotatedFootprint(footprintW, footprintH, rotation)
   const draw = SHAPES[shape]
 
-  const body = draw ? (
-    draw({ w: size.w, h: size.h, mat, material })
+  let body = draw ? (
+    draw({ w: size.w, h: size.h, mat, material, side: wallSide })
   ) : (
     // An unknown art_key should look obviously provisional, not crash.
     <Box w={size.w} h={size.h} z={20} mat={mat} inset={0.3} />
   )
+
+  const reach = WALL_REACH[shape]
+  if (reach !== undefined) {
+    // Hang it from the middle of the tile's wall edge, slid along the wall just
+    // far enough to stay clear of either end.
+    let along = HX / 2
+    if (wallIndex !== undefined) {
+      const fromCorner = (wallIndex + 0.5) * HX
+      along += Math.min(Math.max(fromCorner, reach), GRID_SIZE * HX - reach) - fromCorner
+    }
+    body = <g transform={`translate(${wallSide === 'left' ? -along : along}, ${along / 2})`}>{body}</g>
+  }
 
   return (
     <g

@@ -84,6 +84,34 @@ export function diamondPoints(gx: number, gy: number): string {
     .join(' ')
 }
 
+/* ------------------------------------------------------------------ walls */
+
+/** Category layer of anything hung on a wall rather than stood on the floor. */
+export const WALL_LAYER = 3
+
+export type WallSide = 'left' | 'right'
+
+export interface WallSpot {
+  side: WallSide
+  /** Which tile along that wall, counted from the back corner. */
+  index: number
+  /** The wall-adjacent tile the item hangs above. */
+  gx: number
+  gy: number
+}
+
+/**
+ * The wall a tile hangs on. The right-hand wall runs along gy = 0 and the left
+ * along gx = 0; anything else snaps to whichever wall is nearer, so a wall item
+ * can never be left hanging in mid-air over the middle of the floor. The back
+ * corner tile belongs to the right-hand wall.
+ */
+export function wallSpotOf(gx: number, gy: number): WallSpot {
+  return gy <= gx
+    ? { side: 'right', index: gx, gx, gy: 0 }
+    : { side: 'left', index: gy, gx: 0, gy }
+}
+
 /* ------------------------------------------------------------- footprints */
 
 /**
@@ -181,13 +209,18 @@ export interface Drawable {
  * (gx + gy) is what makes the cat walk behind a bookcase and in front of a rug
  * without any special-casing — the cat is just another drawable.
  *
+ * Wall-mounted items (layer 3) sort before all of it: they are on the wall.
+ *
  * Ties break on id so the order is stable across renders; an unstable sort
  * would make furniture flicker past each other while the cat moves.
  */
 export function depthSort<T extends Drawable>(drawables: readonly T[]): T[] {
+  // Wall-mounted things are flat against the back walls, and everything on the
+  // floor stands in front of them, so they paint first whatever their tile.
+  const depth = (d: Drawable) => (d.layer === WALL_LAYER ? -1 : d.gx + d.gy)
   return [...drawables].sort((a, b) => {
-    const depthA = a.gx + a.gy
-    const depthB = b.gx + b.gy
+    const depthA = depth(a)
+    const depthB = depth(b)
     if (depthA !== depthB) return depthA - depthB
     if (a.layer !== b.layer) return a.layer - b.layer
     if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex

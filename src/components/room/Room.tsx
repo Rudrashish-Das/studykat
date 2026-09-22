@@ -3,11 +3,14 @@ import {
   GRID_SIZE,
   ROOM_H,
   ROOM_W,
+  TILE_H,
+  WALL_LAYER,
   depthOf,
   depthSort,
   diamondPoints,
   toGrid,
   toScreen,
+  wallSpotOf,
   type Drawable,
 } from '@/lib/iso/projection'
 import { Cat, type CatPose } from '@/components/cat/Cat'
@@ -92,8 +95,10 @@ export function Room({
       (p) => ({
         id: p.id,
         kind: 'item' as const,
-        gx: p.grid_x,
-        gy: p.grid_y,
+        // Wall items hang from the wall tile nearest where they were put, so
+        // one saved out in the room is drawn on a wall, not in mid-air.
+        gx: p.item.layer === WALL_LAYER ? wallSpotOf(p.grid_x, p.grid_y).gx : p.grid_x,
+        gy: p.item.layer === WALL_LAYER ? wallSpotOf(p.grid_x, p.grid_y).gy : p.grid_y,
         layer: p.item.layer,
         zIndex: depthOf(p.grid_x, p.grid_y, p.item.footprint_w, p.item.footprint_h, p.rotation),
         placed: p,
@@ -216,7 +221,7 @@ export function Room({
                     >
                       <div
                         className="absolute"
-                        style={{ left: -34, top: -74, width: 68 }}
+                        style={{ left: -CAT_WIDTH / 2, top: CAT_TOP, width: CAT_WIDTH }}
                       >
                         <Cat appearance={cat} pose={catPose} animate={!reducedMotion} />
                       </div>
@@ -226,6 +231,7 @@ export function Room({
 
                 const p = drawable.placed!
                 const selected = selectedId === p.id
+                const wall = wallSpotOf(p.grid_x, p.grid_y)
                 return (
                   <div
                     key={p.id}
@@ -251,6 +257,8 @@ export function Room({
                         footprintW={p.item.footprint_w}
                         footprintH={p.item.footprint_h}
                         rotation={p.rotation}
+                        wallSide={wall.side}
+                        wallIndex={wall.index}
                       />
                     </svg>
                   </div>
@@ -270,6 +278,8 @@ export function Room({
                       footprintH={ghost.h}
                       rotation={ghost.rotation}
                       ghost={ghost.valid ? 'valid' : 'invalid'}
+                      wallSide={wallSpotOf(ghost.gx, ghost.gy).side}
+                      wallIndex={wallSpotOf(ghost.gx, ghost.gy).index}
                       shadow={false}
                     />
                   </svg>
@@ -294,6 +304,16 @@ export function Room({
     </div>
   )
 }
+
+/** The cat's drawn width in room pixels; its SVG is 120 x 124. */
+const CAT_WIDTH = 68
+/**
+ * Stand the cat in the middle of its tile: its contact shadow (y = 112 in the
+ * SVG) goes half a tile below the tile's top corner. Anchoring it at the corner
+ * put its feet on the wall line, so along either wall the cat stood on the
+ * skirting.
+ */
+const CAT_TOP = TILE_H / 2 - (112 * CAT_WIDTH) / 120
 
 function positionOf(gx: number, gy: number) {
   const { x, y } = toScreen(gx, gy)
