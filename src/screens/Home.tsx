@@ -11,10 +11,10 @@ import { useActiveSession, useStartSession, useSubjects, useToday } from '@/lib/
 import { SubjectPicker } from '@/components/session/SubjectPicker'
 import { poseForContext } from '@/lib/cat/pose'
 import { useCatWander } from '@/lib/cat/useCatWander'
-import { streakNudge, localHour } from '@/lib/economy/streak'
+import { streakNudge } from '@/lib/economy/streak'
 import { paths } from '@/lib/paths'
 import { formatMinutes } from '@/lib/timer'
-import { nightnessFor } from '@/lib/daynight'
+import { localTimeOfDay, nightnessFor, useNow } from '@/lib/daynight'
 import { useCatAppearance } from '@/lib/cat/useCatAppearance'
 
 const SUBJECT_KEY = 'studycat:last-subject'
@@ -51,7 +51,7 @@ export function Home() {
   }
 
   const timeZone = profile?.timezone ?? 'UTC'
-  const now = new Date()
+  const now = useNow()
 
   // A live session takes over the screen; arriving here with one running means
   // a reload or a second tab, so send them back to it.
@@ -106,7 +106,7 @@ export function Home() {
         cat={appearance}
         catPose={pose}
         catTile={catTile}
-        nightness={nightnessFor(localHour(now, timeZone))}
+        nightness={nightnessFor(localTimeOfDay(now, timeZone))}
         className="mt-5"
       />
 
