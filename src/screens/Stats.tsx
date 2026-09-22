@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Card } from '@/components/ui/Card'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
 import { StreakFlame } from '@/components/hud/Hud'
@@ -135,27 +135,36 @@ function Heatmap({ days }: { days: DailyTotal[] }) {
     return columns
   }, [days])
 
+  // The newest day sits at the right edge, so start there when the grid overflows.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollLeft = el.scrollWidth
+  }, [weeks])
+
   if (days.length === 0) {
     return <p className="mt-4 text-sm text-ink-faint">Nothing recorded yet.</p>
   }
 
   return (
-    <div className="mt-4 overflow-x-auto pb-2">
-      <div className="flex w-max gap-[3px]">
-        {weeks.map((week, index) => (
-          <div key={index} className="flex flex-col gap-[3px]">
-            {week.map((day) => (
-              <div
-                key={day.day}
-                title={`${day.day}: ${formatMinutes(Math.round(day.seconds / 60))}`}
-                className="h-3 w-3 rounded-[3px]"
-                style={{ backgroundColor: HEAT_STEPS[heatIndex(day.seconds)] }}
-              />
-            ))}
-          </div>
-        ))}
+    <div className="mt-4">
+      <div ref={scrollRef} className="overflow-x-auto pb-2">
+        <div className="flex w-max gap-[3px]">
+          {weeks.map((week, index) => (
+            <div key={index} className="flex flex-col gap-[3px]">
+              {week.map((day) => (
+                <div
+                  key={day.day}
+                  title={`${day.day}: ${formatMinutes(Math.round(day.seconds / 60))}`}
+                  className="h-3 w-3 rounded-[3px]"
+                  style={{ backgroundColor: HEAT_STEPS[heatIndex(day.seconds)] }}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="mt-3 flex items-center gap-2 text-xs text-ink-faint">
+      <div className="mt-1 flex items-center gap-2 text-xs text-ink-faint">
         <span>Less</span>
         {HEAT_STEPS.map((color) => (
           <span key={color} className="h-3 w-3 rounded-[3px]" style={{ backgroundColor: color }} />
