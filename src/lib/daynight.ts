@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 
 /**
  * How dark the room looks, from the user's local time of day in fractional
@@ -44,4 +44,15 @@ export function useNow(intervalMs = 60_000): Date {
     }
   }, [intervalMs])
   return now
+}
+
+/**
+ * The timezone the room's clocks keep. Screens that know the user's stored
+ * timezone provide it, so a wall clock agrees with the night tint; anywhere
+ * else (a shop preview) falls back to this device's own zone.
+ */
+export const ClockTimeZone = createContext<string | undefined>(undefined)
+
+export function useClockTimeZone(): string {
+  return useContext(ClockTimeZone) ?? Intl.DateTimeFormat().resolvedOptions().timeZone
 }

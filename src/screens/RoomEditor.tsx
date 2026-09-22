@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Notice } from '@/components/ui/Notice'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
 import { useProfile } from '@/lib/queries/profile'
+import { ClockTimeZone } from '@/lib/daynight'
 import {
   useCatalog,
   useInventory,
@@ -189,24 +190,26 @@ export function RoomEditor() {
         <kbd>Backspace</kbd> puts it away.
       </p>
 
-      <Room
-        placed={placed}
-        cat={appearance}
-        catPose="idle"
-        catTile={catTile}
-        className="mt-5"
-        interactive
-        selectedId={selectedId}
-        ghost={ghost}
-        onHoverTile={setHoverTile}
-        onItemClick={(id) => {
-          setSelectedId(id)
-          setError(null)
-        }}
-        onTileClick={(gx, gy) => {
-          if (selected) tryMove(gx, gy)
-        }}
-      />
+      <ClockTimeZone.Provider value={profile.timezone}>
+        <Room
+          placed={placed}
+          cat={appearance}
+          catPose="idle"
+          catTile={catTile}
+          className="mt-5"
+          interactive
+          selectedId={selectedId}
+          ghost={ghost}
+          onHoverTile={setHoverTile}
+          onItemClick={(id) => {
+            setSelectedId(id)
+            setError(null)
+          }}
+          onTileClick={(gx, gy) => {
+            if (selected) tryMove(gx, gy)
+          }}
+        />
+      </ClockTimeZone.Provider>
 
       {error && (
         <Notice tone="error" className="mt-4">

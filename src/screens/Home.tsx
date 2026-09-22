@@ -14,7 +14,7 @@ import { useCatLife } from '@/lib/cat/useCatLife'
 import { streakNudge } from '@/lib/economy/streak'
 import { paths } from '@/lib/paths'
 import { formatMinutes } from '@/lib/timer'
-import { localTimeOfDay, nightnessFor, useNow } from '@/lib/daynight'
+import { ClockTimeZone, localTimeOfDay, nightnessFor, useNow } from '@/lib/daynight'
 import { useCatAppearance } from '@/lib/cat/useCatAppearance'
 
 const SUBJECT_KEY = 'studycat:last-subject'
@@ -97,22 +97,24 @@ export function Home() {
         />
       </div>
 
-      <Room
-        placed={placed}
-        cat={appearance}
-        catPose={catLife.pose}
-        catTile={catLife.tile}
-        catFacing={catLife.facing}
-        catPerch={catLife.perch}
-        catEffect={catLife.effect}
-        catPats={catLife.pats}
-        activeItem={catLife.activeItem}
-        catName={profile.cat_name}
-        onCatClick={catLife.pet}
-        onItemVisit={catLife.visit}
-        nightness={nightnessFor(localTimeOfDay(now, timeZone))}
-        className="mt-5"
-      />
+      <ClockTimeZone.Provider value={timeZone}>
+        <Room
+          placed={placed}
+          cat={appearance}
+          catPose={catLife.pose}
+          catTile={catLife.tile}
+          catFacing={catLife.facing}
+          catPerch={catLife.perch}
+          catEffect={catLife.effect}
+          catPats={catLife.pats}
+          activeItem={catLife.activeItem}
+          catName={profile.cat_name}
+          onCatClick={catLife.pet}
+          onItemVisit={catLife.visit}
+          nightness={nightnessFor(localTimeOfDay(now, timeZone))}
+          className="mt-5"
+        />
+      </ClockTimeZone.Provider>
 
       {nudge.show && (
         <Notice className="mt-5">

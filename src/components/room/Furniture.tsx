@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from 'react'
 import { GRID_SIZE, TILE_H, TILE_W, rotatedFootprint, type WallSide } from '@/lib/iso/projection'
+import { localTimeOfDay, useClockTimeZone, useNow } from '@/lib/daynight'
 import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey, type Material } from './materials'
 
 /**
@@ -399,6 +400,35 @@ function Pot({ mat, z, inset }: { mat: Material; z: number; inset: number }) {
   return <Box z={z} mat={mat} inset={inset} />
 }
 
+/**
+ * An hour and a minute hand about (cx, cy), set to the real time where the
+ * user lives. Its own component, so the clock ticks without redrawing the
+ * rest of the furniture.
+ */
+function ClockHands({
+  cx,
+  cy,
+  hour,
+  minute,
+  width,
+}: {
+  cx: number
+  cy: number
+  hour: number
+  minute: number
+  width: number
+}) {
+  const time = localTimeOfDay(useNow(15_000), useClockTimeZone())
+  const hourDeg = (time % 12) * 30
+  const minuteDeg = (time % 1) * 360
+  return (
+    <g strokeWidth={width} fill="none">
+      <path d={`M${cx} ${cy} L${cx} ${cy - hour}`} transform={`rotate(${hourDeg} ${cx} ${cy})`} />
+      <path d={`M${cx} ${cy} L${cx} ${cy - minute}`} transform={`rotate(${minuteDeg} ${cx} ${cy})`} />
+    </g>
+  )
+}
+
 interface ShapeProps {
   w: number
   h: number
@@ -681,7 +711,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
           0.76,
           <>
             <circle cx="8.3" cy="-71" r="6.4" fill={dial} strokeWidth="1.3" />
-            <path d="M8.3 -71 L8.3 -75 M8.3 -71 L11 -69.5" strokeWidth="1.1" fill="none" />
+            <ClockHands cx={8.3} cy={-71} hour={3} minute={4.6} width={1.1} />
           </>,
         )}
       </>
@@ -1117,7 +1147,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
       <g transform="translate(0, -68)">
         <circle cx="0" cy="0" r="14" fill={mat.top} />
         <circle cx="0" cy="0" r="9.5" fill={mat.accent} strokeWidth="1.2" />
-        <path d="M0 0 L0 -6 M0 0 L4.5 2" strokeWidth="1.6" fill="none" />
+        <ClockHands cx={0} cy={0} hour={4.8} minute={7.2} width={1.6} />
       </g>
     </OnWall>
   ),
