@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { paths } from '@/lib/paths'
 import { cn } from '@/lib/cn'
 
@@ -23,9 +23,18 @@ export function NavBar() {
       )}
     >
       <div className="mx-auto flex w-full max-w-5xl items-center gap-1 px-3 py-2 sm:gap-2 sm:px-5 sm:py-3">
-        <span className="mr-auto hidden select-none text-lg font-extrabold tracking-tight sm:block">
+        {/* The wordmark reads as a logo, so it has to behave like one: back to
+            the room, the way every other app's logo goes home. */}
+        <Link
+          to={paths.home}
+          title="StudyKat — back to your room"
+          className={cn(
+            'mr-auto hidden select-none rounded-pill px-1 text-lg font-extrabold tracking-tight sm:block',
+            'transition-colors duration-cozy ease-cozy hover:text-wood-deep',
+          )}
+        >
           Study<span className="text-wood-deep">Kat</span>
-        </span>
+        </Link>
         {links.map((link) => (
           <NavLink
             key={link.to}
