@@ -181,6 +181,24 @@ export function Settings() {
           hint="This decides when your day rolls over. It can only be changed once a day, because it moves the boundary your streak and daily coin cap are counted against."
         />
 
+        {error && <Notice tone="error">{error}</Notice>}
+        {saved && !dirty && <Notice tone="good">Saved.</Notice>}
+
+        <Button disabled={!dirty || updateProfile.isPending} onClick={save}>
+          {updateProfile.isPending ? 'Saving…' : 'Save changes'}
+        </Button>
+      </Card>
+
+      {/* Device preferences apply the moment they change, so they get their own
+          card rather than sitting above a Save button that does not touch them. */}
+      <Card className="mt-5 space-y-5">
+        <div>
+          <h2 className="text-lg">Preferences</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Saved on this device as soon as you change them.
+          </p>
+        </div>
+
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-bold">Sound</p>
@@ -213,8 +231,6 @@ export function Settings() {
 
         <fieldset>
           <legend className="text-sm font-bold">Appearance</legend>
-          {/* Applies on click, like sound: it is a device preference, not part of
-              the profile the Save button writes. */}
           <div className="mt-2 inline-flex rounded-pill border border-ink-line/70 bg-cream-50 p-1">
             {THEME_OPTIONS.map((option) => (
               <label
@@ -238,13 +254,6 @@ export function Settings() {
             ))}
           </div>
         </fieldset>
-
-        {error && <Notice tone="error">{error}</Notice>}
-        {saved && !dirty && <Notice tone="good">Saved.</Notice>}
-
-        <Button disabled={!dirty || updateProfile.isPending} onClick={save}>
-          {updateProfile.isPending ? 'Saving…' : 'Save changes'}
-        </Button>
       </Card>
 
       <Card className="mt-5">
