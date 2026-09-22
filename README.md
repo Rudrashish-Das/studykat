@@ -13,16 +13,20 @@ There is no server to run.
 |---|---|---|
 | 1 | Skeleton: Vite + TS + Tailwind + router, design tokens, placeholder screens, CI deploy | **done** |
 | 2 | Auth: Supabase, email/password, Google OAuth, protected routes, `profiles` trigger | **code done**, needs the project set up (SETUP.md) |
-| 3 | Timer and economy: schema, RLS, RPCs, server-anchored timer, coins, streaks | **code done**, migrations not yet applied |
+| 3 | Timer and economy: schema, RLS, RPCs, server-anchored timer, coins, streaks | **done**, migrations verified against PGlite |
 | 4 | The cat: seeded generator, SVG component, poses, idle animations, onboarding picker | **done** |
 | 5 | The room: isometric renderer, catalog, shop, purchases, editor, cat pathing | **done** |
 | 6 | Stats, polish, accessibility pass, mobile pass | **done** |
 
-Everything through Phase 6 is written, typechecked, and building. What has
-**not** happened is a run against a live database: the migrations in
-`supabase/migrations/` have not been applied to a Supabase project yet, so no
-signup, session, or purchase has been exercised end to end. See
-[SETUP.md](SETUP.md) §2.3.
+Everything through Phase 6 is written, typechecked, linted, building, and — as
+of `npm run test:sql` — actually executed: all seven migrations apply cleanly
+and 94 SQL assertions pass against an in-process PostgreSQL.
+
+What has **not** happened is a run against a live Supabase project. No signup,
+session, or purchase has gone end to end through PostgREST, and the API roles
+and default grants are modelled by a shim rather than observed. See
+[SETUP.md](SETUP.md) §2.3 to apply the migrations, and
+[SECURITY.md](SECURITY.md) for exactly how far the verification goes.
 
 ## Tests
 
@@ -35,6 +39,11 @@ signup, session, or purchase has been exercised end to end. See
 | `src/lib/cat/appearance.test.ts` | The cat generator's determinism, and that the PRNG output never silently changes |
 | `src/lib/iso/projection.test.ts` | Isometric projection, footprint collision, and depth sorting |
 | `src/lib/timer.test.ts` | Elapsed time derived from `started_at`, including pauses and slept tabs |
+
+`npm run test:sql` runs the migrations and 94 SQL assertions against PGlite —
+PostgreSQL compiled to WebAssembly — so the schema, the row-level security
+policies and the whole economy are exercised on any machine that can run
+`npm test`, with no Docker and no database to set up. It runs in CI too.
 
 `npm run lint` runs ESLint with type-aware rules — floating promises, hook
 dependencies, and `jsx-a11y` — and is gated in CI alongside typecheck, tests,

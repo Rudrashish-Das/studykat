@@ -3,7 +3,15 @@
 -- signup (see 0002, which runs after the wallet and streak tables exist) so the
 -- client never needs insert rights on anything.
 
-create extension if not exists pgcrypto;
+-- `gen_random_uuid()` has been in core since PostgreSQL 13 and Supabase runs
+-- well past that, so pgcrypto is not actually required — but ask for it anyway
+-- where it is available, and do not fail where it is not (PGlite, for one).
+do $$
+begin
+  execute 'create extension if not exists pgcrypto';
+exception when others then
+  null;
+end $$;
 
 -- ---------------------------------------------------------------- helpers --
 

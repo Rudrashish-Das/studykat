@@ -36,7 +36,15 @@ create table if not exists auth.users (
   updated_at          timestamptz default now()
 );
 
-create extension if not exists pgcrypto;
+-- `gen_random_uuid()` has been in core since PostgreSQL 13 and Supabase runs
+-- well past that, so pgcrypto is not actually required — but ask for it anyway
+-- where it is available, and do not fail where it is not (PGlite, for one).
+do $$
+begin
+  execute 'create extension if not exists pgcrypto';
+exception when others then
+  null;
+end $$;
 
 -- Supabase reads the signed JWT that PostgREST puts in `request.jwt.claims`.
 create or replace function auth.uid()

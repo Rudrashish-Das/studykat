@@ -23,10 +23,19 @@ layer, the auth flow, the deployment workflow, and the dependency tree. The
 findings below were all found and fixed in this pass; regression assertions for
 each live in `supabase/tests/rls_and_rpc.sql`.
 
-**Important caveat:** the SQL has still never been executed. Docker's WSL
-backend is broken on the development machine and the Supabase MCP connector is
-not authorised, so these fixes are reviewed but not run. Apply the migrations to
-a scratch project and run the assertions before trusting any of it.
+**How far this is verified.** All seven migrations and 94 assertions now run
+green against PGlite — real PostgreSQL 18 compiled to WebAssembly — via
+`npm run test:sql`, and the same suite runs in CI. That covers every finding
+below with a regression test, and the harness is checked to fail on a bad
+assertion rather than passing vacuously.
+
+What it does *not* cover: PGlite is single-connection, and `00_shim.sql` fakes
+Supabase's `auth` schema, its `anon`/`authenticated` roles, and its default
+grants. The grant and policy behaviour is therefore modelled rather than
+observed. Nothing has been run against a real Supabase project, and no signup,
+session, or purchase has gone end to end through PostgREST. Treat the row-level
+security results as strong evidence, not proof, until the migrations are applied
+to a scratch project and the suite is run there.
 
 ### Fixed
 

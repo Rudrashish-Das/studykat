@@ -503,7 +503,17 @@ begin
   assert v_blocked, 'placed an item the user does not own';
 
   -- But an owned one is fine — this is the one table the client may write.
-  select item_id into v_owned from public.inventory where user_id = v_user limit 1;
+  -- It has to be one that is not already placed: the starter floor and walls
+  -- are, and one item may only appear in the room once.
+  select i.item_id into v_owned
+    from public.inventory i
+   where i.user_id = v_user
+     and not exists (
+       select 1 from public.room_layout r
+        where r.user_id = v_user and r.item_id = i.item_id
+     )
+   limit 1;
+  assert v_owned is not null, 'no unplaced owned item to test placement with';
   insert into public.room_layout (user_id, item_id, grid_x, grid_y) values (v_user, v_owned, 4, 4);
 
   -- Off-grid placements are rejected by the check constraint.

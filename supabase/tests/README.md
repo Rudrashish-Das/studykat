@@ -15,6 +15,22 @@
 Everything runs in one transaction and rolls back, so it is safe to run more
 than once — including against a real project.
 
+## The easy way: `npm run test:sql`
+
+```bash
+npm run test:sql
+```
+
+Runs the shim, every migration in order, the fixtures, and all the assertions
+against [PGlite](https://pglite.dev) — real PostgreSQL compiled to WebAssembly,
+in the Node process. No Docker, no database, no Supabase project, and nothing
+to clean up: it lives in memory and dies with the command. This is what CI runs.
+
+It is not a perfect stand-in. PGlite is single-connection, and `00_shim.sql`
+fakes the `auth` schema and the `anon`/`authenticated` roles, so grant and
+policy behaviour is modelled rather than observed. For the real thing, use a
+throwaway container or a scratch project as below.
+
 ## Do not run these against your real project
 
 `01_helpers.sql` installs `SECURITY DEFINER` fixtures that the `authenticated`

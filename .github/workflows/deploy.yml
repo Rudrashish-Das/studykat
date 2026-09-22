@@ -38,6 +38,12 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Schema and RPC tests
+        # Runs the migrations and the SQL assertions against PGlite (Postgres
+        # compiled to WASM), so the schema is exercised in CI without needing a
+        # database service.
+        run: npm run test:sql
+
       - name: Build
         env:
           # Public by design (RLS + SECURITY DEFINER guard everything). Stored
