@@ -83,18 +83,21 @@ const watch = (describe?: Interaction['describe']): Interaction => ({
   describe: describe ?? ((t) => `is staring up at the ${t}.`),
 })
 
+/** Pulled out so `BY_CATEGORY.toy` can reuse it without an indexed lookup. */
+const TOY_BALL: Interaction = {
+  action: 'play',
+  pose: 'playing',
+  lift: null,
+  motion: 'roll',
+  weight: 5,
+  duration: PLAY,
+  describe: (t) => `is batting the ${t} around.`,
+}
+
 /** Keyed by art shape. Heights match the seat or top of each drawing in Furniture. */
 const BY_SHAPE: Record<string, Interaction> = {
   // Toys: the good stuff.
-  'toy-ball': {
-    action: 'play',
-    pose: 'playing',
-    lift: null,
-    motion: 'roll',
-    weight: 5,
-    duration: PLAY,
-    describe: (t) => `is batting the ${t} around.`,
-  },
+  'toy-ball': TOY_BALL,
   'toy-wand': {
     action: 'play',
     pose: 'playing',
@@ -179,7 +182,7 @@ const BY_SHAPE: Record<string, Interaction> = {
 }
 
 const BY_CATEGORY: Record<string, Interaction> = {
-  toy: BY_SHAPE['toy-ball']!,
+  toy: TOY_BALL,
   rug: {
     action: 'roll',
     pose: 'happy',
@@ -311,7 +314,8 @@ export function bedtimeSpot<T extends InteractableItem>(items: readonly T[]): T 
   return null
 }
 
-const PET_LINES = [
+// A non-empty tuple, so the fallback below needs no assertion.
+const PET_LINES: [string, ...string[]] = [
   'leans into your hand and purrs.',
   'headbutts your palm.',
   'slow-blinks at you.',
@@ -321,5 +325,5 @@ const PET_LINES = [
 ]
 
 export function petLine(random: () => number): string {
-  return PET_LINES[Math.floor(random() * PET_LINES.length)] ?? PET_LINES[0]!
+  return PET_LINES[Math.floor(random() * PET_LINES.length)] ?? PET_LINES[0]
 }

@@ -7,6 +7,7 @@ export const profileKey = (userId: string) => ['profile', userId] as const
 
 export function useProfile() {
   const { user } = useAuth()
+  const requireUserId = useUserId()
   const userId = user?.id
 
   return useQuery({
@@ -16,7 +17,7 @@ export function useProfile() {
       const { data, error } = await requireSupabase()
         .from('profiles')
         .select('*')
-        .eq('id', userId!)
+        .eq('id', requireUserId())
         .single()
       if (error) throw error
       return data

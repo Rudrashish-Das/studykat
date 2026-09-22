@@ -66,9 +66,12 @@ export function Focus() {
     )
   }
 
-  const subjectId = session.data.subject_id
+  // Narrowed once here, so the closures below don't each need to re-assert
+  // that `session.data` is still there.
+  const activeSession = session.data
+  const subjectId = activeSession.subject_id
   const subject = subjects.data?.find((s) => s.id === subjectId)
-  const seconds = focusedSeconds(session.data, now)
+  const seconds = focusedSeconds(activeSession, now)
   const belowFloor = seconds < COIN_RULES.minSeconds
 
   // An honest preview, computed with the same rules the server will apply.
@@ -81,7 +84,7 @@ export function Focus() {
 
   async function stop() {
     const result = await endSession.mutateAsync({
-      sessionId: session.data!.id,
+      sessionId: activeSession.id,
       clientSeconds: seconds,
     })
     setLastResult(result)
@@ -114,8 +117,8 @@ export function Focus() {
             {subject.name}
           </p>
         )}
-        {session.data.label && (
-          <p className="mt-2 text-sm text-moon/70">{session.data.label}</p>
+        {activeSession.label && (
+          <p className="mt-2 text-sm text-moon/70">{activeSession.label}</p>
         )}
 
         <p className="mt-4 text-sm text-moon/60">
@@ -143,8 +146,8 @@ export function Focus() {
             size="lg"
             disabled={pauseSession.isPending || resumeSession.isPending}
             onClick={() => {
-              if (paused) resumeSession.mutate(session.data!.id)
-              else pauseSession.mutate(session.data!.id)
+              if (paused) resumeSession.mutate(activeSession.id)
+              else pauseSession.mutate(activeSession.id)
             }}
           >
             {paused ? 'Resume' : 'Pause'}
@@ -176,7 +179,7 @@ export function Focus() {
               type="button"
               className="underline"
               onClick={() => {
-                abandonSession.mutate(session.data!.id, {
+                abandonSession.mutate(activeSession.id, {
                   onSuccess: () => navigate(paths.home, { replace: true }),
                 })
               }}

@@ -1,7 +1,7 @@
 import { memo, type ReactNode } from 'react'
 import { GRID_SIZE, TILE_H, TILE_W, rotatedFootprint, type WallSide } from '@/lib/iso/projection'
 import { localTimeOfDay, useClockTimeZone, useNow } from '@/lib/daynight'
-import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey, type Material } from './materials'
+import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey, washFor, type Material } from './materials'
 
 /**
  * Every piece of furniture in the game.
@@ -58,8 +58,8 @@ function rounded(pts: Pt[], r: number = CORNER): string {
   if (pts.length < 3) return `M${poly(pts).replace(/ /g, 'L')}`
   const d: string[] = []
   pts.forEach((cur, i) => {
-    const prev = pts[(i - 1 + pts.length) % pts.length]!
-    const next = pts[(i + 1) % pts.length]!
+    const prev = pts[(i - 1 + pts.length) % pts.length] ?? cur
+    const next = pts[(i + 1) % pts.length] ?? cur
     const from = towards(cur, prev, r)
     const to = towards(cur, next, r)
     d.push(`${i === 0 ? 'M' : 'L'}${from.x},${from.y}`, `Q${cur.x},${cur.y} ${to.x},${to.y}`)
@@ -511,8 +511,8 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     const ped1 = long - 0.14
     const front = 0.84
     const frontFill = alongX ? mat.left : mat.right
-    const paper = MATERIALS.cream!
-    const cover = MATERIALS.teal!
+    const paper = MATERIALS.cream
+    const cover = MATERIALS.teal
     const cup = P(long - 0.42, 0.36, TOP)
     const drawer = (z0: number, z1: number) => {
       const knob = P((ped0 + ped1) / 2, front, (z0 + z1) / 2)
@@ -548,12 +548,12 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
         <g transform={`translate(${cup.x}, ${cup.y})`}>
           {/* The opening, then the pencils standing in it, then the front of the
               cup over their ends — drawn the other way round they stood behind it. */}
-          <ellipse cx="0" cy="-11" rx="5" ry="2.2" fill={MATERIALS.sage!.right} strokeWidth="1.3" />
+          <ellipse cx="0" cy="-11" rx="5" ry="2.2" fill={MATERIALS.sage.right} strokeWidth="1.3" />
           <path d="M-2 -9 L-4 -20 M0.5 -9 L1 -22 M2.5 -9 L6 -19" strokeWidth="2.6" />
           <path d="M-2 -9 L-4 -20" stroke="#e4bf62" strokeWidth="1.4" />
-          <path d="M0.5 -9 L1 -22" stroke={MATERIALS.rose!.left} strokeWidth="1.4" />
-          <path d="M2.5 -9 L6 -19" stroke={MATERIALS.sage!.left} strokeWidth="1.4" />
-          <path d="M-5 -11 A5 2.2 0 0 0 5 -11 L5 -1 A5 2.2 0 0 1 -5 -1 Z" fill={MATERIALS.sage!.left} strokeWidth="1.3" />
+          <path d="M0.5 -9 L1 -22" stroke={MATERIALS.rose.left} strokeWidth="1.4" />
+          <path d="M2.5 -9 L6 -19" stroke={MATERIALS.sage.left} strokeWidth="1.4" />
+          <path d="M-5 -11 A5 2.2 0 0 0 5 -11 L5 -1 A5 2.2 0 0 1 -5 -1 Z" fill={MATERIALS.sage.left} strokeWidth="1.3" />
         </g>
       </>
     )
@@ -609,10 +609,10 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     // pillows and a duvet turned down below them. The material is the bedding;
     // cream sheets on a cream frame under a brown duvet read as a pale slab
     // with a plank on it.
-    const wood = MATERIALS.oak!
-    const linen = MATERIALS.cream!
+    const wood = MATERIALS.oak
+    const linen = MATERIALS.cream
     const fold = { ...linen, top: '#fffaf2' }
-    const duvet = material === 'cream' ? MATERIALS.sage! : mat
+    const duvet = material === 'cream' ? MATERIALS.sage : mat
     const x1 = w - 0.08
     return (
       <>
@@ -652,11 +652,13 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
         {shelves.map((v) => (
           <g key={v}>{facePanel(f, 0.1, v, 0.9, v + 3.5, mat.left, 1, 1)}</g>
         ))}
-        {spines.map((b, i) => (
-          <g key={b.u}>
-            {facePanel(f, b.u, shelves[i % 3]! + 3.5, b.u + b.w, shelves[i % 3]! + 3.5 + b.h, b.c, 1, 1)}
-          </g>
-        ))}
+        {spines.map((b, i) => {
+          // i % 3 is always 0, 1 or 2 — always a valid index into `shelves`.
+          const shelf = shelves[i % 3] ?? 0
+          return (
+            <g key={b.u}>{facePanel(f, b.u, shelf + 3.5, b.u + b.w, shelf + 3.5 + b.h, b.c, 1, 1)}</g>
+          )
+        })}
       </>
     )
   },
@@ -689,7 +691,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     const onFace = (x0: number, y1: number, children: ReactNode) => (
       <g transform={`translate(${(x0 - y1) * HX}, ${(x0 + y1) * HY}) matrix(1 0.5 0 1 0 0)`}>{children}</g>
     )
-    const dial = MATERIALS.cream!.top
+    const dial = MATERIALS.cream.top
     const brass = '#d8b56a'
     return (
       <>
@@ -844,7 +846,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     <>
       <Pot mat={mat} z={18} inset={0.5} />
       <g transform={`translate(0, ${HY - 18})`}>
-        <path d="M0 0 C -3 -14 2 -22 0 -34" fill="none" stroke={MATERIALS.walnut!.right} strokeWidth="3.4" />
+        <path d="M0 0 C -3 -14 2 -22 0 -34" fill="none" stroke={MATERIALS.walnut.right} strokeWidth="3.4" />
         {/* A loose canopy of small leaves rather than three big ones. */}
         {[
           [0, -46, 17, 11],
@@ -874,10 +876,10 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
         <path
           d="M2 0 C -6 -8 8 -13 2 -22 C -2 -27 -8 -27 -11 -29"
           fill="none"
-          stroke={MATERIALS.walnut!.right}
+          stroke={MATERIALS.walnut.right}
           strokeWidth="4"
         />
-        <path d="M2 -18 C 8 -21 13 -24 16 -25" fill="none" stroke={MATERIALS.walnut!.right} strokeWidth="2.6" />
+        <path d="M2 -18 C 8 -21 13 -24 16 -25" fill="none" stroke={MATERIALS.walnut.right} strokeWidth="2.6" />
         <ellipse cx="-13" cy="-32" rx="13" ry="7" fill={LEAF.mid} />
         <ellipse cx="17" cy="-28" rx="10" ry="6" fill={LEAF.light} />
         <ellipse cx="0" cy="-40" rx="11" ry="6.5" fill={LEAF.dark} />
@@ -893,8 +895,15 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
    * an un-migrated `plant-small/sage` would hit the unknown-shape fallback and
    * the plants would get *worse* on deploy than they were before.
    */
-  'plant-small': (p) => SHAPES.succulent!(p),
-  'plant-tall': (p) => SHAPES.monstera!(p),
+  'plant-small': (p) => {
+    // Always present: defined a few entries up, in this same object.
+    if (!SHAPES.succulent) throw new Error('missing succulent shape')
+    return SHAPES.succulent(p)
+  },
+  'plant-tall': (p) => {
+    if (!SHAPES.monstera) throw new Error('missing monstera shape')
+    return SHAPES.monstera(p)
+  },
 
   'toy-ball': ({ mat }) => (
     <g transform={`translate(0, ${HY - 9})`}>
@@ -906,7 +915,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
 
   'toy-wand': ({ mat }) => (
     <g transform={`translate(0, ${HY})`}>
-      <line x1="-10" y1="0" x2="8" y2="-28" strokeWidth="3" stroke={MATERIALS.oak!.right} />
+      <line x1="-10" y1="0" x2="8" y2="-28" strokeWidth="3" stroke={MATERIALS.oak.right} />
       <ellipse cx="10" cy="-32" rx="7" ry="4" fill={mat.left} transform="rotate(-30 10 -32)" />
     </g>
   ),
@@ -998,8 +1007,8 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
         <circle cx="4" cy="-30" r="1.3" fill={OUTLINE} stroke="none" />
       </g>
       {/* A bow at the neck, so it reads as a teddy and not a small brown dog. */}
-      <path d="M0 -19 L-5.5 -22 L-5.5 -16 Z M0 -19 L5.5 -22 L5.5 -16 Z" fill={MATERIALS.rose!.left} strokeWidth="1.2" />
-      <circle cx="0" cy="-19" r="1.4" fill={MATERIALS.rose!.right} strokeWidth="1" />
+      <path d="M0 -19 L-5.5 -22 L-5.5 -16 Z M0 -19 L5.5 -22 L5.5 -16 Z" fill={MATERIALS.rose.left} strokeWidth="1.2" />
+      <circle cx="0" cy="-19" r="1.4" fill={MATERIALS.rose.right} strokeWidth="1" />
     </g>
   ),
 
@@ -1093,7 +1102,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     <>
       <Box z={5} mat={mat} inset={0.6} />
       <g transform={`translate(0, ${HY - 5})`}>
-        <line x1="0" y1="0" x2="0" y2="-52" strokeWidth="3" stroke={MATERIALS.walnut!.right} />
+        <line x1="0" y1="0" x2="0" y2="-52" strokeWidth="3" stroke={MATERIALS.walnut.right} />
         <polygon points="-16,-52 16,-52 11,-72 -11,-72" fill={mat.accent} />
         <ellipse cx="0" cy="-42" rx="22" ry="11" fill="#f5cf7a" stroke="none" opacity="0.2" />
       </g>
@@ -1124,9 +1133,9 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     // Three books of different sizes and covers, each nudged off the one below,
     // with the cream page block showing on the long face between the covers.
     const books: { x0: number; x1: number; y0: number; y1: number; z: number; cover: Material }[] = [
-      { x0: 0.16, x1: 0.84, y0: 0.26, y1: 0.76, z: 9, cover: MATERIALS.sage! },
+      { x0: 0.16, x1: 0.84, y0: 0.26, y1: 0.76, z: 9, cover: MATERIALS.sage },
       { x0: 0.22, x1: 0.8, y0: 0.2, y1: 0.66, z: 8, cover: mat },
-      { x0: 0.26, x1: 0.74, y0: 0.3, y1: 0.7, z: 7, cover: MATERIALS.teal! },
+      { x0: 0.26, x1: 0.74, y0: 0.3, y1: 0.7, z: 7, cover: MATERIALS.teal },
     ]
     let z0 = 0
     return (
@@ -1143,7 +1152,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
           const book = (
             <g key={z0}>
               <Slab x0={b.x0} x1={b.x1} y0={b.y0} y1={b.y1} z0={z0} z1={z1} mat={b.cover} r={2} />
-              <path d={rounded(pages, 1)} fill={MATERIALS.cream!.top} strokeWidth="1.2" />
+              <path d={rounded(pages, 1)} fill={MATERIALS.cream.top} strokeWidth="1.2" />
               <path
                 d={`M${poly([iso(b.x0 + 0.08, b.y1, mid), iso(b.x1 - 0.11, b.y1, mid)])}`}
                 fill="none"
@@ -1165,7 +1174,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     return (
       <>
         {/* A wooden tray for everything to stand on. */}
-        <Slab x0={0.1} x1={0.9} y0={0.18} y1={0.86} z0={0} z1={3} mat={MATERIALS.walnut!} r={2} />
+        <Slab x0={0.1} x1={0.9} y0={0.18} y1={0.86} z0={0} z1={3} mat={MATERIALS.walnut} r={2} />
         <g transform={`translate(${pot.x}, ${pot.y})`}>
           {/* Handle behind on the left, spout reaching toward the cup. */}
           <path d="M-9 -12 C-19 -14 -19 -1 -9 -3" fill="none" strokeWidth="5" />
@@ -1278,7 +1287,7 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
         <OnWall side={side}>
           <path
             d={rounded([{ x: -20, y: -86 }, { x: 20, y: -86 }, { x: 20, y: -40 }, { x: -20, y: -40 }])}
-            fill={MATERIALS.oak!.top}
+            fill={MATERIALS.oak.top}
           />
           <path
             d={rounded([{ x: -15, y: -81 }, { x: 15, y: -81 }, { x: 15, y: -44 }, { x: -15, y: -44 }], 2)}
@@ -1326,14 +1335,16 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
    */
   floor: ({ mat }) => (
     <g>
-      {[
-        [0, 0],
-        [1, 0],
-        [0, 1],
-        [1, 1],
-      ].map(([i, j]) => (
-        <g key={`${i}-${j}`} transform={`translate(${(i! - j!) * HX}, ${(i! + j!) * HY})`}>
-          <FlatDiamond w={1} h={1} fill={(i! + j!) % 2 === 0 ? mat.top : mat.left} />
+      {(
+        [
+          [0, 0],
+          [1, 0],
+          [0, 1],
+          [1, 1],
+        ] satisfies [number, number][]
+      ).map(([i, j]) => (
+        <g key={`${i}-${j}`} transform={`translate(${(i - j) * HX}, ${(i + j) * HY})`}>
+          <FlatDiamond w={1} h={1} fill={(i + j) % 2 === 0 ? mat.top : mat.left} />
         </g>
       ))}
     </g>
@@ -1342,10 +1353,10 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
   wall: ({ mat }) => <WallSwatch left={mat.left} right={mat.right} skirting={mat.accent} />,
 
   wallcolor: ({ material }) => {
-    const wash = WALL_WASHES[material] ?? WALL_WASHES.cream!
+    const wash = washFor(material) ?? WALL_WASHES.cream
     // The wash only repaints the walls; the skirting stays whatever the wall
     // material is, so show it in the default plaster.
-    return <WallSwatch left={wash.left} right={wash.right} skirting={MATERIALS.plaster!.accent} />
+    return <WallSwatch left={wash.left} right={wash.right} skirting={MATERIALS.plaster.accent} />
   },
 
   'rug-round': ({ w, h, mat }) => {

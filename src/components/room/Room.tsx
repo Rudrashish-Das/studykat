@@ -28,7 +28,7 @@ import type { CatAppearance } from '@/lib/cat/appearance'
 import type { ItemMotion } from '@/lib/cat/interactions'
 import { EAT_MS } from '@/lib/cat/useCatLife'
 import { Furniture } from './Furniture'
-import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey } from './materials'
+import { MATERIALS, OUTLINE, materialFor, parseArtKey, washFor } from './materials'
 import type { CatalogItem, RoomLayoutRow } from '@/lib/supabase/types'
 import { cn } from '@/lib/cn'
 import { activeSurface, isSurface } from './surfaces'
@@ -272,7 +272,7 @@ export function Room({
 
   const floorMat = materialFor(surfaces.floor ? parseArtKey(surfaces.floor.art_key).material : 'pine')
   const wallMat = materialFor(surfaces.wall ? parseArtKey(surfaces.wall.art_key).material : 'plaster')
-  const wash = surfaces.wash ? WALL_WASHES[parseArtKey(surfaces.wash.art_key).material] : undefined
+  const wash = surfaces.wash ? washFor(parseArtKey(surfaces.wash.art_key).material) : undefined
 
   return (
     <div
@@ -309,7 +309,7 @@ export function Room({
           {interactive && hover && (
             <polygon
               points={diamondPoints(hover.gx, hover.gy)}
-              fill={MATERIALS.cream!.top}
+              fill={MATERIALS.cream.top}
               fillOpacity="0.35"
               stroke={OUTLINE}
               strokeWidth="2"
@@ -325,7 +325,9 @@ export function Room({
             style={{ width: ROOM_W, height: ROOM_H, transform: `scale(${scale})` }}
           >
               {objects.map((p) => {
-                const drawn = drawnAt.get(p.id)!
+                // Always present: `drawnAt` is built from these same objects.
+                const drawn = drawnAt.get(p.id)
+                if (!drawn) return null
                 const screen = toScreen(drawn.gx, drawn.gy)
                 const selected = selectedId === p.id
                 const wall = wallSpotOf(p.grid_x, p.grid_y)

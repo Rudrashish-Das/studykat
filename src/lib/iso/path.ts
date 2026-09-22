@@ -2,6 +2,13 @@ import { GRID_SIZE, footprintCells, type GridPoint } from './projection'
 
 export const cellKey = (gx: number, gy: number) => `${gx},${gy}`
 
+/** The inverse of `cellKey`. `slice`, not a destructured `split`, so a
+ *  well-formed key never needs an indexed-access assertion to read back. */
+function parseCellKey(key: string): GridPoint {
+  const comma = key.indexOf(',')
+  return { gx: Number(key.slice(0, comma)), gy: Number(key.slice(comma + 1)) }
+}
+
 /** Cells the cat cannot walk through. Rugs and wall decor do not block. */
 export function blockedCells(
   items: {
@@ -56,7 +63,8 @@ export function findPath(
   ]
 
   while (queue.length > 0) {
-    const cell = queue.shift()!
+    const cell = queue.shift()
+    if (!cell) break
     if (cell.gx === to.gx && cell.gy === to.gy) break
 
     for (const next of neighbours(cell)) {
@@ -74,8 +82,7 @@ export function findPath(
   const path: GridPoint[] = []
   let cursor: string | null = goal
   while (cursor && cursor !== cellKey(from.gx, from.gy)) {
-    const [gx, gy] = cursor.split(',').map(Number)
-    path.push({ gx: gx!, gy: gy! })
+    path.push(parseCellKey(cursor))
     cursor = cameFrom.get(cursor) ?? null
   }
   return path.reverse()
