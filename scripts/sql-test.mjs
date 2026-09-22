@@ -86,6 +86,59 @@ function fieldsOfType(source, typeName) {
     .map((m) => m[1])
 }
 
+/**
+ * The whole security model rests on one invariant: the anon key is public, and
+ * the only thing standing between it and the data is row-level security. A
+ * table in `public` with RLS off is readable and writable by anyone who opens
+ * the JavaScript bundle, because Supabase grants the API roles full table
+ * privileges by default.
+ *
+ * So: assert RLS is on everywhere, and print exactly what the client can write
+ * and what a signed-out visitor can read, rather than trusting that the
+ * policies say what we remember writing.
+ */
+async function checkRlsCoverage(db) {
+  const { rows: tables } = await db.query(
+    `select c.relname as tbl, c.relrowsecurity as rls
+       from pg_class c join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relkind = 'r'
+      order by 1`,
+  )
+
+  const unprotected = tables.filter((t) => !t.rls)
+  if (unprotected.length > 0) {
+    for (const t of unprotected) {
+      console.log(`${red('fail')}  ${t.tbl}: row-level security is OFF`)
+    }
+    return false
+  }
+  console.log(`${green('  ok')}  row-level security on all ${tables.length} tables`)
+
+  const { rows: policies } = await db.query(
+    `select tablename, cmd from pg_policies where schemaname = 'public'`,
+  )
+  const writable = [...new Set(policies.filter((p) => p.cmd !== 'SELECT').map((p) => p.tablename))]
+  const { rows: anonRows } = await db.query(
+    `select distinct tablename from pg_policies
+      where schemaname = 'public' and 'anon' = any(roles)`,
+  )
+
+  console.log(`${green('  ok')}  client-writable tables: ${writable.join(', ') || '(none)'}`)
+  console.log(
+    `${green('  ok')}  readable signed-out: ${anonRows.map((r) => r.tablename).join(', ') || '(none)'}`,
+  )
+
+  // These five are the economy. If any of them ever gains a write policy, the
+  // anon key stops being safe to publish.
+  const mustBeReadOnly = ['wallet', 'transactions', 'streaks', 'study_sessions', 'inventory']
+  const leaked = mustBeReadOnly.filter((t) => writable.includes(t))
+  if (leaked.length > 0) {
+    console.log(`${red('fail')}  these must never be client-writable: ${leaked.join(', ')}`)
+    return false
+  }
+  return true
+}
+
 async function checkSchemaMatchesTypes(db) {
   const typesSrc = readFileSync(join(root, 'src', 'lib', 'supabase', 'types.ts'), 'utf8')
   const dbSrc = readFileSync(join(root, 'src', 'lib', 'supabase', 'database.ts'), 'utf8')
@@ -184,6 +237,14 @@ async function main() {
     console.error(red(error.message))
     if (error.detail) console.error(dim(`detail: ${error.detail}`))
     if (error.where) console.error(dim(error.where))
+    process.exit(1)
+  }
+
+  console.log()
+  console.log(dim('checking row-level security coverage...'))
+  const rlsOk = await checkRlsCoverage(db)
+  if (!rlsOk) {
+    console.error(`\n${red('The anon key would not be safe to publish against this schema.')}`)
     process.exit(1)
   }
 

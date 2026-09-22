@@ -157,7 +157,14 @@ coin rules, is worth more than the tidiness of hiding them.
 
 ### Accepted risks
 
-- **The anon key is public.** By design; see the top of this file.
+- **The anon key is public.** By design; see the top of this file. What makes
+  that safe is an invariant, not a habit, so `npm run test:sql` now asserts it:
+  row-level security is on for all nine tables, `wallet`, `transactions`,
+  `streaks`, `study_sessions` and `inventory` have no write policy at all, and
+  the only thing a signed-out visitor can read is `catalog_items` — the price
+  list. The check fails the build if any of that changes. The realistic way to
+  break it is creating a table in the dashboard's table editor, which does not
+  enable RLS for you.
 - **Timezone-boundary manipulation is bounded, not eliminated.** See finding 4.
 - **`onboarded_at` is client-writable.** A user can mark themselves onboarded
   without going through `complete_onboarding`, which skips the free starter
