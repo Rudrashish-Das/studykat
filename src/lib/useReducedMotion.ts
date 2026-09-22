@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 /**
  * §9: with reduced motion requested, the cat stops wandering, the room stops
@@ -31,7 +31,7 @@ export function useElementWidth<T extends HTMLElement>(): [React.RefObject<T>, n
   const ref = useRef<T>(null)
   const [width, setWidth] = useState(0)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = ref.current
     if (!element) return
     const observer = new ResizeObserver((entries) => {
