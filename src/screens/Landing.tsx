@@ -51,7 +51,7 @@ export function Landing() {
           </div>
 
           <p className="mt-4 text-sm text-ink-faint">
-            Free, no ads, no leaderboard. Just you and the cat.
+            Free, no ads. Just you and the cat.
           </p>
         </div>
 
