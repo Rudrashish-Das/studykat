@@ -371,7 +371,7 @@ function describe(
         perch: null,
         activeItem: null,
         effect: null,
-        description: `${name} is pottering about. Tap ${name} to pet them, or tap something in the room.`,
+        description: `${name} is pottering about. Tap them for a pat, or tap an item.`,
       }
   }
 }

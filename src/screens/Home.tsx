@@ -81,9 +81,10 @@ export function Home() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-8 pt-4 sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl sm:text-3xl">{profile.cat_name}&apos;s room</h1>
-          <p className="text-sm text-ink-soft" aria-live="polite">
+          {/* Reserve two lines so the room doesn't jump as the description changes length. */}
+          <p className="min-h-10 text-sm text-ink-soft" aria-live="polite">
             {catLife.description}
           </p>
         </div>
