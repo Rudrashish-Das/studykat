@@ -55,7 +55,7 @@ export function TreatMenu({
   // Only a settled, genuinely empty catalog hides the section — while it is
   // still loading, `data` is undefined and the section stays mounted, so it
   // does not pop in (and shove the rest of the page down) after the first paint.
-  if (foods.data && foods.data.length === 0) return null
+  if (foods.data?.length === 0) return null
 
   return (
     <section
