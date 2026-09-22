@@ -122,34 +122,39 @@ export function Home() {
         </Notice>
       )}
 
-      <SubjectPicker value={subjectId} onChange={chooseSubject} className="mt-6" />
+      <section className="mt-6 rounded-cozy border border-ink-line/70 bg-paper p-4 shadow-cozy sm:p-6">
+        <SubjectPicker value={subjectId} onChange={chooseSubject} />
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button
-          size="lg"
-          disabled={startSession.isPending}
-          onClick={() => {
-            startSession.mutate(
-              { subjectId },
-              { onSuccess: () => navigate(paths.focus) },
-            )
-          }}
-        >
-          {startSession.isPending ? 'Starting…' : 'Start studying'}
-        </Button>
-        <ButtonLink to={paths.room} variant="secondary" size="lg">
-          Edit room
-        </ButtonLink>
-        <ButtonLink to={paths.shop} variant="outline" size="lg">
-          <CoinMark size={18} />
-          Shop
-        </ButtonLink>
-      </div>
+        <div className="mt-5 flex flex-col gap-3 border-t border-ink-line/50 pt-5 sm:flex-row sm:items-center">
+          <Button
+            size="lg"
+            className="w-full sm:w-auto"
+            disabled={startSession.isPending}
+            onClick={() => {
+              startSession.mutate(
+                { subjectId },
+                { onSuccess: () => navigate(paths.focus) },
+              )
+            }}
+          >
+            {startSession.isPending ? 'Starting…' : 'Start studying'}
+          </Button>
+          <div className="grid grid-cols-2 gap-3 sm:ml-auto sm:flex">
+            <ButtonLink to={paths.room} variant="secondary">
+              Edit room
+            </ButtonLink>
+            <ButtonLink to={paths.shop} variant="outline">
+              <CoinMark size={16} />
+              Shop
+            </ButtonLink>
+          </div>
+        </div>
 
-      <p className="mt-3 text-sm text-ink-faint">
-        One coin a minute, more after 25 minutes, more again as your streak grows. Sessions under
-        five minutes earn nothing and do not count toward your streak.
-      </p>
+        <p className="mt-4 text-xs leading-relaxed text-ink-faint">
+          One coin a minute, more after 25 minutes, more again as your streak grows. Sessions under
+          five minutes earn nothing and do not count toward your streak.
+        </p>
+      </section>
     </div>
   )
 }

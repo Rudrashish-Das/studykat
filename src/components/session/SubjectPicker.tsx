@@ -4,7 +4,7 @@ import { useCreateSubject, useSubjects } from '@/lib/queries/sessions'
 import type { Subject } from '@/lib/supabase/types'
 
 const chip = cn(
-  'inline-flex cursor-pointer items-center gap-2 rounded-pill border px-3.5 py-1.5 text-sm font-bold',
+  'inline-flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-pill border px-3.5 py-1.5 text-sm font-bold',
   'transition-colors duration-cozy ease-cozy',
   'has-[:focus-visible]:outline has-[:focus-visible]:outline-[3px] has-[:focus-visible]:outline-teal-dark',
 )
@@ -51,7 +51,8 @@ export function SubjectPicker({
   return (
     <fieldset className={className}>
       <legend className="text-sm font-bold">Studying</legend>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      {/* One swipeable row on phones so a long list does not stack up; wraps on wider screens. */}
+      <div className="-mx-4 mt-2 flex items-center gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&::-webkit-scrollbar]:hidden">
         <label
           className={cn(
             chip,
@@ -98,7 +99,7 @@ export function SubjectPicker({
 
         {adding ? (
           <form
-            className="inline-flex items-center gap-2"
+            className="inline-flex shrink-0 items-center gap-2"
             onSubmit={(e) => {
               e.preventDefault()
               add()
@@ -141,7 +142,7 @@ export function SubjectPicker({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="rounded-pill border border-dashed border-ink-line px-3.5 py-1.5 text-sm font-bold text-ink-soft hover:text-ink"
+            className="shrink-0 whitespace-nowrap rounded-pill border border-dashed border-ink-line px-3.5 py-1.5 text-sm font-bold text-ink-soft hover:text-ink"
           >
             + New subject
           </button>
