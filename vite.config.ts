@@ -1,17 +1,29 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
+import { existsSync } from 'node:fs'
+
+/** GitHub Pages reads the custom domain from a CNAME file at the site root. */
+const cnameFile = fileURLToPath(new URL('./public/CNAME', import.meta.url))
 
 /**
- * GitHub Pages serves this app from a subpath (`/<repo>/`), so Vite needs a
- * matching `base`. We derive it from `GITHUB_REPOSITORY` in CI so renaming the
- * repo can never desync the build, and fall back to `/studykat/` locally.
- * `VITE_BASE_PATH` overrides both (e.g. for a custom domain, where it is `/`).
+ * GitHub Pages serves this app from a subpath (`/<repo>/`) — unless there is a
+ * custom domain, which serves it from the root instead.
+ *
+ * So `public/CNAME` decides the base as well as the domain. That file is the
+ * one fact that already has to be right for the domain to work at all, and
+ * deriving the base from it means the two cannot disagree: with a custom
+ * domain configured and a `/<repo>/` base, every asset URL 404s and the page
+ * renders blank. Same reasoning as reading `GITHUB_REPOSITORY` below rather
+ * than writing the repo name out — one source, no drift.
+ *
+ * `VITE_BASE_PATH` overrides both, for a host that is neither.
  */
 function resolveBase(isDevServer: boolean): string {
   if (isDevServer) return '/'
   const explicit = process.env.VITE_BASE_PATH
   if (explicit) return explicit.endsWith('/') ? explicit : `${explicit}/`
+  if (existsSync(cnameFile)) return '/'
   const repo = process.env.GITHUB_REPOSITORY?.split('/')[1]
   return repo ? `/${repo}/` : '/studykat/'
 }

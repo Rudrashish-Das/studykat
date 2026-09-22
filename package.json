@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run typecheck && vite build",
+    "build": "npm run typecheck && vite build && npm run check:dist",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
@@ -15,7 +15,8 @@
     "lint:fix": "eslint . --fix",
     "test:sql": "node scripts/sql-test.mjs",
     "check:imports": "node scripts/check-import-case.mjs",
-    "verify": "npm run lint && npm run check:imports && npm run typecheck && npm test && npm run test:sql && npm run build"
+    "verify": "npm run lint && npm run check:imports && npm run typecheck && npm test && npm run test:sql && npm run build",
+    "check:dist": "node scripts/check-dist-base.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
