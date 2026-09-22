@@ -167,6 +167,11 @@ function Slab({
   )
 }
 
+/** Where footprint point (x, y), `z` px up, lands on screen. */
+function iso(x: number, y: number, z = 0): Pt {
+  return { x: (x - y) * HX, y: (x + y) * HY - z }
+}
+
 /** A flat shape lying on the floor: rugs and floor decals. */
 function FlatDiamond({ w, h, fill, opacity }: { w: number; h: number; fill: string; opacity?: number }) {
   const c = footprintCorners(w, h)
@@ -908,22 +913,75 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </OnWall>
   ),
 
-  bookstack: ({ mat }) => (
-    <g transform={`translate(0, ${HY})`}>
-      <Box z={6} mat={mat} inset={0.62} />
-      <Box z={5} lift={6} mat={{ ...mat, top: mat.accent, left: mat.accent }} inset={0.68} />
-      <Box z={5} lift={11} mat={mat} inset={0.72} />
-    </g>
-  ),
+  bookstack: ({ mat }) => {
+    // Three books of different sizes and covers, each nudged off the one below,
+    // with the cream page block showing on the long face between the covers.
+    const books: { x0: number; x1: number; y0: number; y1: number; z: number; cover: Material }[] = [
+      { x0: 0.16, x1: 0.84, y0: 0.26, y1: 0.76, z: 9, cover: MATERIALS.sage! },
+      { x0: 0.22, x1: 0.8, y0: 0.2, y1: 0.66, z: 8, cover: mat },
+      { x0: 0.26, x1: 0.74, y0: 0.3, y1: 0.7, z: 7, cover: MATERIALS.teal! },
+    ]
+    let z0 = 0
+    return (
+      <>
+        {books.map((b) => {
+          const z1 = z0 + b.z
+          const pages = [
+            iso(b.x0 + 0.05, b.y1, z0 + 2),
+            iso(b.x1 - 0.08, b.y1, z0 + 2),
+            iso(b.x1 - 0.08, b.y1, z1 - 2),
+            iso(b.x0 + 0.05, b.y1, z1 - 2),
+          ]
+          const mid = (z0 + z1) / 2
+          const book = (
+            <g key={z0}>
+              <Slab x0={b.x0} x1={b.x1} y0={b.y0} y1={b.y1} z0={z0} z1={z1} mat={b.cover} r={2} />
+              <path d={rounded(pages, 1)} fill={MATERIALS.cream!.top} strokeWidth="1.2" />
+              <path
+                d={`M${poly([iso(b.x0 + 0.08, b.y1, mid), iso(b.x1 - 0.11, b.y1, mid)])}`}
+                fill="none"
+                strokeWidth="0.8"
+                opacity="0.35"
+              />
+            </g>
+          )
+          z0 = z1
+          return book
+        })}
+      </>
+    )
+  },
 
-  teaset: ({ mat }) => (
-    <g transform={`translate(0, ${HY - 4})`}>
-      <ellipse cx="0" cy="0" rx="14" ry="7" fill={mat.top} />
-      <path d="M-7 -2 A 7 7 0 0 1 7 -2 L7 -10 L-7 -10 Z" fill={mat.top} />
-      <path d="M7 -7 q 7 2 0 6" fill="none" strokeWidth="1.6" />
-      <circle cx="-13" cy="4" r="4" fill={mat.accent} />
-    </g>
-  ),
+  teaset: ({ mat }) => {
+    const pot = iso(0.32, 0.5, 3)
+    const cup = iso(0.74, 0.44, 3)
+    return (
+      <>
+        {/* A wooden tray for everything to stand on. */}
+        <Slab x0={0.1} x1={0.9} y0={0.18} y1={0.86} z0={0} z1={3} mat={MATERIALS.walnut!} r={2} />
+        <g transform={`translate(${pot.x}, ${pot.y})`}>
+          {/* Handle behind on the left, spout reaching toward the cup. */}
+          <path d="M-9 -12 C-19 -14 -19 -1 -9 -3" fill="none" strokeWidth="5" />
+          <path d="M-9 -12 C-19 -14 -19 -1 -9 -3" fill="none" stroke={mat.right} strokeWidth="2" />
+          <path d="M8 -5 Q15 -6 17 -15 L20.5 -15 Q18 -2 8 0 Z" fill={mat.left} />
+          {/* A squat round body with a painted band. */}
+          <path d="M-11 -8 C-11 -18 11 -18 11 -8 C11 -2 7 0 0 0 C-7 0 -11 -2 -11 -8 Z" fill={mat.top} />
+          <path d="M-10.5 -6 C-6 -3.5 6 -3.5 10.5 -6" fill="none" stroke={mat.accent} strokeWidth="2.2" />
+          <path d="M4 -15 C8 -14 10 -11 10 -8" fill="none" stroke="#fff" strokeWidth="1.4" opacity="0.7" />
+          {/* Lid and knob. */}
+          <ellipse cx="0" cy="-15" rx="6" ry="2.2" fill={mat.left} />
+          <circle cx="0" cy="-18.2" r="2" fill={mat.accent} />
+        </g>
+        <g transform={`translate(${cup.x}, ${cup.y})`}>
+          {/* Saucer, then a cup of tea on it. */}
+          <ellipse cx="0" cy="0" rx="8" ry="3.6" fill={mat.top} />
+          <path d="M5 -7 q4 1 0 4.5" fill="none" strokeWidth="1.8" />
+          <path d="M-5 -8 L-4 -1.5 A4 1.8 0 0 0 4 -1.5 L5 -8 Z" fill={mat.left} />
+          <ellipse cx="0" cy="-8" rx="5" ry="2" fill="#b0784a" />
+        </g>
+      </>
+    )
+  },
 
   /*
    * Wall shapes are drawn about the middle of their tile's wall edge (the
