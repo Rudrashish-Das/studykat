@@ -66,7 +66,9 @@ export function Home() {
   const bedtime = poseForContext({ now, timeZone, sessionActive: false }) === 'sleeping'
   const catLife = useCatLife({ placed, asleep: bedtime, catName: profile?.cat_name ?? 'Your cat' })
 
-  if (!profile || !appearance || roomPending) {
+  // `today` also gates the first paint: otherwise the streak notice mounts a
+  // moment after the page appears and shoves the studying card down.
+  if (!profile || !appearance || roomPending || today.isPending) {
     return <FullScreenSpinner label="Opening the door" />
   }
 
