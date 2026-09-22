@@ -23,7 +23,9 @@ export function Spinner({ className }: { className?: string }) {
 
 export function FullScreenSpinner({ label }: { label: string }) {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center gap-4 px-5 py-20">
+    // Pinned to the viewport rather than its parent: inside the app shell the
+    // parent has no definite height, so a min-h-full box sat near the top.
+    <div className="pointer-events-none fixed inset-0 flex flex-col items-center justify-center gap-4 px-5">
       <Spinner />
       <p className="text-sm text-ink-soft">{label}…</p>
     </div>
