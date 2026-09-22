@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { requireSupabase } from '@/lib/supabase/client'
-import { useAuth, useUserId } from '@/lib/auth'
+import { useAuth, useUserId } from '@/lib/useAuth'
 import { keys as sessionKeys } from './sessions'
 import type { CatalogItem, InventoryRow, RoomLayoutRow } from '@/lib/supabase/types'
 import type { PlacedItem } from '@/components/room/Room'

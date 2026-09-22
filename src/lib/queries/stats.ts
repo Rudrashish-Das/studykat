@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { requireSupabase } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/useAuth'
 
 export interface DailyTotal {
   day: string

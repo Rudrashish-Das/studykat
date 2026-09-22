@@ -1,32 +1,8 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
-import type { Session, User } from '@supabase/supabase-js'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import { isSupabaseConfigured } from '@/lib/env'
-
-interface AuthState {
-  /** `true` until the initial session lookup settles. Guards must wait on it. */
-  loading: boolean
-  session: Session | null
-  user: User | null
-  /**
-   * Set when the user arrives from a password-reset email. Supabase signs them
-   * in with a recovery session, so without this flag they would land in the app
-   * and never be asked for a new password.
-   */
-  recovery: boolean
-  clearRecovery: () => void
-}
-
-const AuthContext = createContext<AuthState | null>(null)
+import { AuthContext, type AuthState } from './auth-context'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
@@ -75,23 +51,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthState>(() => ({ ...state, clearRecovery }), [state, clearRecovery])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-/**
- * The signed-in user's id, for code paths that cannot run without one. Throws
- * rather than asserting, so a mutation fired during sign-out fails with a
- * sentence instead of "cannot read properties of undefined".
- */
-export function useUserId(): () => string {
-  const { user } = useAuth()
-  return () => {
-    if (!user) throw new Error('You are not signed in.')
-    return user.id
-  }
-}
-
-export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>')
-  return ctx
 }

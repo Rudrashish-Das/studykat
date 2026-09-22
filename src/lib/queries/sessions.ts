@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { requireSupabase } from '@/lib/supabase/client'
-import { useAuth, useUserId } from '@/lib/auth'
+import { useAuth, useUserId } from '@/lib/useAuth'
 import { useTimerStore } from '@/lib/timer'
 import type { StudySession, Subject, TodaySummary } from '@/lib/supabase/types'
 

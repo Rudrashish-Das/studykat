@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { requireSupabase } from '@/lib/supabase/client'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/useAuth'
 import { keys as sessionKeys } from './sessions'
 import type { CatFood } from '@/lib/supabase/types'
 

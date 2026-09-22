@@ -7,7 +7,7 @@ import { Notice } from '@/components/ui/Notice'
 import { paths } from '@/lib/paths'
 import { isSupabaseConfigured } from '@/lib/env'
 import { NotConfigured } from '@/screens/NotConfigured'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/useAuth'
 import { sendPasswordReset, signInWithGoogle, signInWithPassword, signUpWithPassword, updatePassword } from '@/lib/auth-actions'
 
 export type AuthMode = 'login' | 'register' | 'reset' | 'new-password'

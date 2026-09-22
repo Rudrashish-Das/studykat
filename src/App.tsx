@@ -9,7 +9,8 @@ import {
   RequireAuth,
   RequireOnboarded,
 } from '@/components/layout/Guards'
-import { AuthProvider, useAuth } from '@/lib/auth'
+import { AuthProvider } from '@/lib/auth'
+import { useAuth } from '@/lib/useAuth'
 import { paths } from '@/lib/paths'
 import { Landing } from '@/screens/Landing'
 import { Auth } from '@/screens/Auth'

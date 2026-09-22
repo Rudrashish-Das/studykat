@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { requireSupabase } from '@/lib/supabase/client'
 import type { Profile } from '@/lib/supabase/types'
-import { useAuth, useUserId } from '@/lib/auth'
+import { useAuth, useUserId } from '@/lib/useAuth'
 
 export const profileKey = (userId: string) => ['profile', userId] as const
 
