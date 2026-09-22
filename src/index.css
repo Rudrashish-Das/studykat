@@ -441,6 +441,51 @@
   100% { transform: translateY(-34px) scale(1); opacity: 0; }
 }
 .sc-cat-heart { animation: sc-float-up 1.6s ease-out forwards; }
+
+/* --------------------------------------------------------------- feeding --
+   The bowl drops in with a small bounce, the food goes down a bite at a time
+   (its duration is set inline to match how long the cat eats), crumbs hop out,
+   and the empty bowl slides away. The cat's head bobs as it chews. */
+
+@keyframes sc-bowl-drop {
+  0%   { transform: translateY(-26px); opacity: 0; }
+  55%  { transform: translateY(0); opacity: 1; }
+  75%  { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+.sc-bowl-drop { animation: sc-bowl-drop 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+
+@keyframes sc-bowl-leave {
+  0%   { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(6px) scale(0.9); opacity: 0; }
+}
+.sc-bowl-leave { animation: sc-bowl-leave 0.7s ease-in 0.6s both; }
+
+@keyframes sc-food-eaten {
+  0%, 12% { transform: scale(1, 1); opacity: 1; }
+  30%     { transform: scale(0.94, 0.78); }
+  50%     { transform: scale(0.86, 0.56); }
+  70%     { transform: scale(0.76, 0.34); }
+  88%     { transform: scale(0.6, 0.12); opacity: 1; }
+  100%    { transform: scale(0.5, 0); opacity: 0; }
+}
+.sc-food-eaten { animation: sc-food-eaten 3.6s ease-out 0.2s both; }
+
+@keyframes sc-food-crumb {
+  0%, 100% { transform: translate(0, 0); opacity: 0; }
+  10%      { opacity: 1; }
+  45%      { transform: translate(calc(var(--sc-crumb-x) * 0.6), -9px); opacity: 1; }
+  80%      { transform: translate(var(--sc-crumb-x), 6px); opacity: 0; }
+}
+.sc-food-crumb { animation: sc-food-crumb 1.3s ease-out infinite; opacity: 0; }
+
+@keyframes sc-cat-chew {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(2px) rotate(-1.5deg); }
+  50%      { transform: translateY(0.5px) rotate(0deg); }
+  75%      { transform: translateY(2px) rotate(1.5deg); }
+}
+.sc-cat-chew { animation: sc-cat-chew 0.55s ease-in-out infinite; }
 .sc-cat-zzz   { animation: sc-float-up 3.2s ease-out infinite; }
 
 /* The cat's hit target: no button chrome, but a clear focus ring. */

@@ -483,6 +483,42 @@ begin
   assert v_blocked, 'bought an item whose unlock condition was not met';
 end $$;
 
+-- Feeding the cat spends the food's price and nothing else.
+do $$
+declare
+  v_user    uuid := '11111111-1111-1111-1111-111111111111';
+  v_food    public.cat_foods;
+  v_blocked boolean;
+begin
+  assert not exists (select 1 from public.cat_foods where price not between 2 and 8),
+    'a food is priced outside 2 to 8 coins';
+  select * into v_food from public.cat_foods where slug = 'salmon';
+
+  perform tst.set_coins(v_user, v_food.price - 1);
+  v_blocked := false;
+  begin
+    perform public.feed_cat(v_food.id);
+  exception when check_violation then v_blocked := true;
+  end;
+  assert v_blocked, 'fed the cat without enough coins';
+
+  perform tst.set_coins(v_user, 20);
+  perform public.feed_cat(v_food.id);
+  perform public.feed_cat(v_food.id);
+  assert tst.coins_of(v_user) = 20 - 2 * v_food.price, 'feeding debited the wrong amount';
+  assert (
+    select count(*) from public.transactions
+     where user_id = v_user and reason = 'treat' and ref_id = v_food.id and delta = -v_food.price
+  ) = 2, 'feeding did not write a transaction per meal';
+
+  v_blocked := false;
+  begin
+    insert into public.cat_foods (slug, name, price, art_key) values ('free-lunch', 'Free', 2, 'kibble');
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+  assert v_blocked, 'the client could add to the food list';
+end $$;
+
 -- A layout row may only reference an item the user owns.
 do $$
 declare

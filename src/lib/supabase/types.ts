@@ -12,6 +12,7 @@ export type TransactionReason =
   | 'purchase'
   | 'milestone'
   | 'refund'
+  | 'treat'
 
 export type ItemCategory =
   | 'floor'
@@ -109,6 +110,16 @@ export type CatalogItem = {
   footprint_w: number
   footprint_h: number
   layer: number
+  art_key: string
+}
+
+/** A treat for the cat: bought and eaten on the spot, never kept. */
+export type CatFood = {
+  id: string
+  slug: string
+  name: string
+  description: string | null
+  price: number
   art_key: string
 }
 

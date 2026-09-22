@@ -31,6 +31,8 @@ export type CatPose =
   | 'pouncing'
   /** Both paws wrapped round something, rocking into it and bunny-kicking. */
   | 'wrestling'
+  /** Head down in a bowl, eyes shut, chewing. */
+  | 'eating'
 
 /**
  * Whole-body moves for the poses that go somewhere. They share a beat with the
@@ -79,8 +81,8 @@ export const Cat = memo(function Cat({
   }
 
   // Studying: head dips toward the desk and the tail settles. Curious: lower
-  // still, nose first.
-  const headDip = pose === 'studying' ? 3 : pose === 'curious' ? 5 : 0
+  // still, nose first. Eating: right down in the bowl.
+  const headDip = pose === 'studying' ? 3 : pose === 'curious' ? 5 : pose === 'eating' ? 10 : 0
 
   return (
     <svg
@@ -131,15 +133,20 @@ export const Cat = memo(function Cat({
           {/* Front paws, and the socks that sit on them */}
           <Paws appearance={appearance} pose={pose} animate={animate} />
 
-          {/* Head */}
-          <Ears appearance={appearance} dip={headDip} animate={animate} />
-          <ellipse cx="60" cy={48 + headDip} rx="25" ry="22" fill={coat.body} />
-          <g clipPath={`url(#${headClip})`} stroke="none">
-            <HeadPattern appearance={appearance} dip={headDip} />
-          </g>
-          <ellipse cx="60" cy={48 + headDip} rx="25" ry="22" fill="none" />
+          {/* Head, which bobs as a whole while chewing */}
+          <g
+            className={animate && pose === 'eating' ? 'sc-cat-chew' : undefined}
+            style={{ transformOrigin: `60px ${70 + headDip}px` }}
+          >
+            <Ears appearance={appearance} dip={headDip} animate={animate} />
+            <ellipse cx="60" cy={48 + headDip} rx="25" ry="22" fill={coat.body} />
+            <g clipPath={`url(#${headClip})`} stroke="none">
+              <HeadPattern appearance={appearance} dip={headDip} />
+            </g>
+            <ellipse cx="60" cy={48 + headDip} rx="25" ry="22" fill="none" />
 
-          <Face appearance={appearance} pose={pose} dip={headDip} animate={animate} nose={nose} />
+            <Face appearance={appearance} pose={pose} dip={headDip} animate={animate} nose={nose} />
+          </g>
 
           {appearance.sparkle && (
             <ellipse
@@ -185,6 +192,7 @@ function Tail({
       : tail === 'curl'
         ? 'M86 98 C 102 100 108 88 100 80 C 95 75 88 78 90 84'
         : pose === 'happy' ||
+            pose === 'eating' ||
             pose === 'playing' ||
             pose === 'scratching' ||
             pose === 'pouncing' ||
@@ -393,8 +401,8 @@ function Face({
   const leftEye = { x: 51, y: y(48) }
   const rightEye = { x: 69, y: y(48) }
 
-  // Happy cats close their eyes into arcs; studying cats narrow them.
-  const closed = pose === 'happy'
+  // Happy and eating cats close their eyes into arcs; studying cats narrow them.
+  const closed = pose === 'happy' || pose === 'eating'
   const narrow = pose === 'studying' || pose === 'scratching'
   // Hunting eyes: pupils blown wide.
   const wide = pose === 'playing' || pose === 'curious' || pose === 'pouncing' || pose === 'wrestling'

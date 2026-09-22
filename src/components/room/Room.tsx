@@ -15,8 +15,10 @@ import {
   type Drawable,
 } from '@/lib/iso/projection'
 import { Cat, type CatPose } from '@/components/cat/Cat'
+import { FoodBowl } from '@/components/cat/Food'
 import type { CatAppearance } from '@/lib/cat/appearance'
 import type { ItemMotion } from '@/lib/cat/interactions'
+import { EAT_MS } from '@/lib/cat/useCatLife'
 import { Furniture } from './Furniture'
 import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey } from './materials'
 import type { CatalogItem, RoomLayoutRow } from '@/lib/supabase/types'
@@ -42,6 +44,8 @@ export interface RoomProps {
   catPats?: number
   /** The item the cat is playing with, and how it moves. */
   activeItem?: { id: string; motion: ItemMotion } | null
+  /** A bowl of food in front of the cat; `serving` changes with each one. */
+  catMeal?: { artKey: string; serving: number; finished: boolean } | null
   /** Makes the cat a button. Home only: the editor needs clicks to reach the items. */
   onCatClick?: () => void
   catName?: string
@@ -77,6 +81,7 @@ export function Room({
   catEffect = null,
   catPats = 0,
   activeItem = null,
+  catMeal = null,
   onCatClick,
   catName = 'the cat',
   onItemVisit,
@@ -390,6 +395,17 @@ export function Room({
                   ) : (
                     <CatFigure appearance={cat} pose={catPose} facing={facing} animate={!reducedMotion} />
                   )}
+                  {catMeal && (
+                    // Keyed by serving, so a second helping drops in fresh.
+                    <FoodBowl
+                      key={catMeal.serving}
+                      artKey={catMeal.artKey}
+                      finished={catMeal.finished}
+                      eatMs={EAT_MS - 400}
+                      className="absolute"
+                      style={{ left: (CAT_WIDTH - BOWL_WIDTH) / 2, top: BOWL_TOP, width: BOWL_WIDTH }}
+                    />
+                  )}
                   <CatEffect effect={catEffect} pats={catPats} />
                 </div>
               </div>
@@ -540,6 +556,11 @@ const CAT_WIDTH = 68
  * skirting.
  */
 const CAT_TOP = TILE_H / 2 - (112 * CAT_WIDTH) / 120
+
+/** The food bowl, in room pixels; its SVG is 40 x 30. */
+const BOWL_WIDTH = 30
+/** Sits the bowl's shadow (y = 26) on the cat's, just in front of its paws. */
+const BOWL_TOP = (112 * CAT_WIDTH) / 120 - (26 * BOWL_WIDTH) / 40
 
 function positionOf(gx: number, gy: number) {
   const { x, y } = toScreen(gx, gy)

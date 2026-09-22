@@ -10,6 +10,7 @@
 - `end_session` measures its own duration and ignores what the client claims
 - streak advancement, freeze tokens, the daily cap, and the once-a-day goal bonus
 - purchases: price, unlock rule, duplicates
+- feeding the cat: food prices stay 2–8 coins, each meal is debited and logged
 - `room_layout` can only reference items the user owns
 
 Everything runs in one transaction and rolls back, so it is safe to run more

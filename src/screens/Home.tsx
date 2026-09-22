@@ -9,6 +9,7 @@ import { useProfile } from '@/lib/queries/profile'
 import { usePlacedItems } from '@/lib/queries/room'
 import { useActiveSession, useStartSession, useSubjects, useToday } from '@/lib/queries/sessions'
 import { SubjectPicker } from '@/components/session/SubjectPicker'
+import { TreatMenu } from '@/components/cat/TreatMenu'
 import { poseForContext } from '@/lib/cat/pose'
 import { useCatLife } from '@/lib/cat/useCatLife'
 import { streakNudge } from '@/lib/economy/streak'
@@ -107,6 +108,7 @@ export function Home() {
           catPerch={catLife.perch}
           catEffect={catLife.effect}
           catPats={catLife.pats}
+          catMeal={catLife.meal}
           activeItem={catLife.activeItem}
           catName={profile.cat_name}
           onCatClick={catLife.pet}
@@ -115,6 +117,14 @@ export function Home() {
           className="mt-5"
         />
       </ClockTimeZone.Provider>
+
+      <TreatMenu
+        catName={profile.cat_name}
+        coins={summary?.coins ?? 0}
+        eating={catLife.eating}
+        onFed={catLife.feed}
+        className="mt-5"
+      />
 
       {nudge.show && (
         <Notice className="mt-5">

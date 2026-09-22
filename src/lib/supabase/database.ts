@@ -1,5 +1,6 @@
 import type {
   CatalogItem,
+  CatFood,
   EndSessionResult,
   InventoryRow,
   ItemCategory,
@@ -84,6 +85,7 @@ export type Database = {
       streaks: ReadOnly<Streak>
       inventory: ReadOnly<InventoryRow>
       catalog_items: ReadOnly<CatalogItem>
+      cat_foods: ReadOnly<CatFood>
       room_layout: {
         Row: RoomLayoutRow
         Insert: RoomLayoutInsert
@@ -107,6 +109,10 @@ export type Database = {
       purchase_item: {
         Args: { p_item_id: string }
         Returns: { item_id: string; spent: number; coins: number }
+      }
+      feed_cat: {
+        Args: { p_food_id: string }
+        Returns: { food_id: string; spent: number; coins: number }
       }
       get_today: {
         Args: Record<string, never>

@@ -62,6 +62,7 @@ const TYPE_TO_TABLE = {
   CatalogItem: 'catalog_items',
   InventoryRow: 'inventory',
   RoomLayoutRow: 'room_layout',
+  CatFood: 'cat_foods',
 }
 
 function fieldsOfType(source, typeName) {

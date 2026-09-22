@@ -19,6 +19,10 @@ export const STEP_MS = 900
 const REST_MIN_MS = 3000
 const REST_RANGE_MS = 5000
 const PET_MS = 2600
+/** How long a meal takes, bowl down to last bite. */
+export const EAT_MS = 3800
+/** After the last bite: whiskers licked, hearts, bowl taken away. */
+const FED_MS = 2400
 /** Petting a sleeping cat wakes it for this long. */
 const WOKEN_MS = 2 * 60 * 1000
 /** How often an idle cat goes to an item rather than just across the room. */
@@ -29,7 +33,14 @@ type Activity =
   | { kind: 'walking'; itemId: string | null }
   | { kind: 'interacting'; itemId: string; interaction: Interaction }
   | { kind: 'petted'; line: string; returnTo: Activity }
+  | { kind: 'eating'; food: string }
   | { kind: 'sleeping' }
+
+/** Something the cat is being fed. */
+export interface Meal {
+  name: string
+  artKey: string
+}
 
 export interface CatLife {
   tile: GridPoint
@@ -37,6 +48,8 @@ export interface CatLife {
   activity: Activity
   /** Bumped on every pat, so the hearts replay even on a second pat. */
   pats: number
+  /** The bowl in front of the cat: while it eats, then briefly empty. */
+  meal: (Meal & { serving: number; finished: boolean }) | null
 }
 
 export interface CatLifeView {
@@ -49,10 +62,14 @@ export interface CatLifeView {
   activeItem: { id: string; motion: Interaction['motion'] } | null
   effect: 'hearts' | 'zzz' | null
   pats: number
+  meal: CatLife['meal']
+  /** Mid-meal: it will not be fed again, sent anywhere, or petted until done. */
+  eating: boolean
   /** "Miso is batting the ball of yarn around." */
   description: string
   pet: () => void
   visit: (itemId: string) => void
+  feed: (meal: Meal) => void
 }
 
 /**
@@ -77,6 +94,7 @@ export function useCatLife(input: {
     facing: 'left',
     activity: { kind: 'idle' },
     pats: 0,
+    meal: null,
   }))
 
   // The routine runs on timers, so it reads the latest inputs through refs
@@ -85,6 +103,7 @@ export function useCatLife(input: {
   const env = useRef({ placed: input.placed, blocked, asleep: input.asleep, reducedMotion })
   env.current = { placed: input.placed, blocked, asleep: input.asleep, reducedMotion }
   const timer = useRef<number | undefined>(undefined)
+  const bowlTimer = useRef<number | undefined>(undefined)
   const wokenUntil = useRef(0)
 
   const set = useCallback((patch: Partial<CatLife>) => {
@@ -201,14 +220,19 @@ export function useCatLife(input: {
   // Start the day, and stop it on the way out.
   useEffect(() => {
     brain.current.rest(env.current.asleep ? 600 : REST_MIN_MS)
-    return () => window.clearTimeout(timer.current)
+    return () => {
+      window.clearTimeout(timer.current)
+      window.clearTimeout(bowlTimer.current)
+    }
   }, [])
 
   // Bedtime and morning.
   useEffect(() => {
     const { activity } = lifeRef.current
     if (input.asleep) {
-      if (Date.now() > wokenUntil.current && activity.kind !== 'petted') brain.current.sleep()
+      // A cat mid-pat or mid-meal finishes first, and goes to bed after.
+      if (Date.now() > wokenUntil.current && activity.kind !== 'petted' && activity.kind !== 'eating')
+        brain.current.sleep()
     } else if (activity.kind === 'sleeping' || isNapping(activity)) {
       brain.current.rest(1500)
     }
@@ -222,11 +246,13 @@ export function useCatLife(input: {
     const gone = itemId !== null && !input.placed.some((p) => p.id === itemId)
     const stuck = blocked.has(cellKey(current.tile.gx, current.tile.gy))
     if (stuck) set({ tile: pickWanderTarget(current.tile, blocked, Math.random) ?? current.tile })
-    if (gone || stuck) brain.current.rest(1500)
+    // A meal is finished where it was served; its own timer moves things on.
+    if ((gone || stuck) && current.activity.kind !== 'eating') brain.current.rest(1500)
   }, [input.placed, blocked, set])
 
   const pet = useCallback(() => {
     const current = lifeRef.current
+    if (current.activity.kind === 'eating') return
     const wasAsleep = current.activity.kind === 'sleeping' || isNapping(current.activity)
     if (wasAsleep && env.current.asleep) wokenUntil.current = Date.now() + WOKEN_MS
     // A cat petted mid-nap is awake now; one petted mid-play goes back to it.
@@ -249,19 +275,59 @@ export function useCatLife(input: {
   }, [schedule, set])
 
   const visit = useCallback((itemId: string) => {
+    if (lifeRef.current.activity.kind === 'eating') return
     if (env.current.asleep) wokenUntil.current = Date.now() + WOKEN_MS
     if (!brain.current.goTo(itemId)) brain.current.rest()
   }, [])
 
+  /**
+   * Food, set down wherever the cat is. It stops what it was doing (and gets
+   * off whatever it was on), eats, then licks its whiskers, pleased with you.
+   */
+  const feed = useCallback(
+    (meal: Meal) => {
+      const current = lifeRef.current
+      if (current.activity.kind === 'eating') return
+      if (env.current.asleep) wokenUntil.current = Date.now() + WOKEN_MS
+      window.clearTimeout(bowlTimer.current)
+      set({
+        activity: { kind: 'eating', food: meal.name },
+        meal: { ...meal, serving: (current.meal?.serving ?? 0) + 1, finished: false },
+      })
+      schedule(() => {
+        const now = lifeRef.current
+        set({
+          activity: { kind: 'petted', line: fedLine(Math.random), returnTo: { kind: 'idle' } },
+          pats: now.pats + 1,
+          meal: now.meal && { ...now.meal, finished: true },
+        })
+        bowlTimer.current = window.setTimeout(() => set({ meal: null }), FED_MS)
+        schedule(() => brain.current.rest(), FED_MS)
+      }, EAT_MS)
+    },
+    [schedule, set],
+  )
+
   return useMemo(
-    () => describe(life, input.placed, input.catName, pet, visit),
-    [life, input.placed, input.catName, pet, visit],
+    () => describe(life, input.placed, input.catName, pet, visit, feed),
+    [life, input.placed, input.catName, pet, visit, feed],
   )
 }
 
 /* ---------------------------------------------------------------- helpers */
 
 const noop = () => undefined
+
+const FED_LINES = [
+  'licks their whiskers, very pleased with you.',
+  'washes their face. That hit the spot.',
+  'looks at the bowl, then at you. Surely there is more.',
+  'purrs like a small engine.',
+]
+
+function fedLine(random: () => number): string {
+  return FED_LINES[Math.floor(random() * FED_LINES.length)] ?? 'licks their whiskers.'
+}
 
 function startTile(blocked: Set<string>): GridPoint {
   const start = { gx: 5, gy: 5 }
@@ -307,8 +373,18 @@ function describe(
   name: string,
   pet: () => void,
   visit: (itemId: string) => void,
+  feed: (meal: Meal) => void,
 ): CatLifeView {
-  const base = { tile: life.tile, facing: life.facing, pats: life.pats, pet, visit }
+  const base = {
+    tile: life.tile,
+    facing: life.facing,
+    pats: life.pats,
+    meal: life.meal,
+    eating: life.activity.kind === 'eating',
+    pet,
+    visit,
+    feed,
+  }
   const thing = (id: string | null) => {
     const found = id ? placed.find((p) => p.id === id) : undefined
     return found ? inlineName(found.item.name) : null
@@ -330,6 +406,15 @@ function describe(
         activeItem: null,
         effect: 'hearts',
         description: `${name} ${life.activity.line}`,
+      }
+    case 'eating':
+      return {
+        ...base,
+        pose: 'eating',
+        perch: null,
+        activeItem: null,
+        effect: null,
+        description: `${name} is tucking into the ${life.activity.food.toLowerCase()}.`,
       }
     case 'interacting': {
       const { interaction, itemId } = life.activity
