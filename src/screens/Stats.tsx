@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
 import { StreakFlame } from '@/components/hud/Hud'
@@ -135,6 +135,9 @@ function Heatmap({ days }: { days: DailyTotal[] }) {
     return columns
   }, [days])
 
+  // Tapping a day picks it out, since touch screens never show the tooltip.
+  const [picked, setPicked] = useState<DailyTotal | null>(null)
+
   // The newest day sits at the right edge, so start there when the grid overflows.
   const scrollRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
@@ -148,15 +151,22 @@ function Heatmap({ days }: { days: DailyTotal[] }) {
 
   return (
     <div className="mt-4">
-      <div ref={scrollRef} className="overflow-x-auto pb-2">
+      <div ref={scrollRef} className="overflow-x-auto p-1 pb-2">
         <div className="flex w-max gap-[3px]">
           {weeks.map((week, index) => (
             <div key={index} className="flex flex-col gap-[3px]">
               {week.map((day) => (
-                <div
+                <button
                   key={day.day}
+                  type="button"
                   title={`${day.day}: ${formatMinutes(Math.round(day.seconds / 60))}`}
-                  className="h-3 w-3 rounded-[3px]"
+                  aria-label={`${dayLabel(day.day)}: ${formatMinutes(Math.round(day.seconds / 60))}`}
+                  aria-pressed={picked?.day === day.day}
+                  onClick={() => setPicked(picked?.day === day.day ? null : day)}
+                  className={cn(
+                    'h-3 w-3 rounded-[3px]',
+                    picked?.day === day.day && 'ring-2 ring-ink ring-offset-1 ring-offset-paper',
+                  )}
                   style={{ backgroundColor: HEAT_STEPS[heatIndex(day.seconds)] }}
                 />
               ))}
@@ -164,6 +174,11 @@ function Heatmap({ days }: { days: DailyTotal[] }) {
           ))}
         </div>
       </div>
+      <Readout>
+        {picked
+          ? `${dayLabel(picked.day)}: ${formatMinutes(Math.round(picked.seconds / 60))}`
+          : 'Tap a day to see its total.'}
+      </Readout>
       <div className="mt-1 flex items-center gap-2 text-xs text-ink-faint">
         <span>Less</span>
         {HEAT_STEPS.map((color) => (
@@ -188,6 +203,8 @@ function WeeklyBars({ days }: { days: DailyTotal[] }) {
   }, [days])
 
   const max = Math.max(...weeks.map((w) => w.minutes), 1)
+  const [picked, setPicked] = useState<string | null>(null)
+  const pickedWeek = weeks.find((w) => w.label === picked)
 
   if (weeks.length === 0) {
     return <p className="mt-4 text-sm text-ink-faint">Nothing recorded yet.</p>
@@ -197,24 +214,52 @@ function WeeklyBars({ days }: { days: DailyTotal[] }) {
     <div className="mt-4">
       <div className="flex h-36 items-end gap-1.5">
         {weeks.map((week) => (
-          <div
+          // The whole column is the target, so short bars are still easy to tap.
+          <button
             key={week.label}
-            className="group relative flex-1"
+            type="button"
+            className="group relative flex h-full flex-1 items-end"
             title={`Week of ${week.label}: ${formatMinutes(week.minutes)}`}
+            aria-label={`Week of ${dayLabel(week.label)}: ${formatMinutes(week.minutes)}`}
+            aria-pressed={picked === week.label}
+            onClick={() => setPicked(picked === week.label ? null : week.label)}
           >
             <div
               className={cn(
-                'w-full rounded-t-md bg-wood transition-[height] duration-700 ease-cozy',
+                'w-full rounded-t-md bg-wood transition-[height,background-color] duration-700 ease-cozy',
                 week.minutes === 0 && 'bg-cream-300',
+                picked === week.label && 'bg-wood-deep ring-2 ring-ink ring-offset-1 ring-offset-paper',
               )}
               style={{ height: `${Math.max((week.minutes / max) * 136, 3)}px` }}
             />
-          </div>
+          </button>
         ))}
       </div>
-      <p className="mt-2 text-xs text-ink-faint">
-        Tallest week: {formatMinutes(max)}.
-      </p>
+      <Readout>
+        {pickedWeek
+          ? `Week of ${dayLabel(pickedWeek.label)}: ${formatMinutes(pickedWeek.minutes)}`
+          : `Tallest week: ${formatMinutes(max)}. Tap a week to see its total.`}
+      </Readout>
     </div>
   )
+}
+
+/** What was tapped on a chart, in place of the tooltip a touch screen never shows. */
+function Readout({ children }: { children: React.ReactNode }) {
+  return (
+    <p aria-live="polite" className="mt-2 text-xs font-bold text-ink-soft">
+      {children}
+    </p>
+  )
+}
+
+/** "2026-09-22" as "Tue 22 Sept", read as a local date rather than UTC midnight. */
+function dayLabel(day: string): string {
+  const [y, m, d] = day.split('-').map(Number)
+  if (!y || !m || !d) return day
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
 }
