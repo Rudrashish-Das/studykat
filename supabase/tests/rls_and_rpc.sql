@@ -710,6 +710,91 @@ begin
     'the client could reset its own timezone rate-limit clock';
 end $$;
 
+-- ================================================== bounded writes (0014) ==
+
+-- Subjects are client-owned, so their isolation needs asserting as much as the
+-- economy's. User B makes one; user A must not see, edit, or delete it, and
+-- must not be able to create one in B's name.
+select tst.become('22222222-2222-2222-2222-222222222222');
+insert into public.subjects (user_id, name) values ('22222222-2222-2222-2222-222222222222', 'B only');
+select tst.become('11111111-1111-1111-1111-111111111111');
+
+do $$
+declare v_blocked boolean := false;
+begin
+  assert (select count(*) from public.subjects where name = 'B only') = 0,
+    'user A can see user B''s subjects';
+
+  update public.subjects set name = 'hijacked' where name = 'B only';
+  delete from public.subjects where name = 'B only';
+
+  begin
+    insert into public.subjects (user_id, name)
+    values ('22222222-2222-2222-2222-222222222222', 'planted');
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+  assert v_blocked, 'user A could create a subject owned by user B';
+end $$;
+
+select tst.become('22222222-2222-2222-2222-222222222222');
+do $$
+begin
+  assert (select count(*) from public.subjects where name = 'B only') = 1,
+    'user A could edit or delete user B''s subject';
+end $$;
+select tst.become('11111111-1111-1111-1111-111111111111');
+
+-- And there is a ceiling on how many one account can make.
+do $$
+declare
+  v_user    uuid := '11111111-1111-1111-1111-111111111111';
+  v_blocked boolean := false;
+begin
+  insert into public.subjects (user_id, name)
+  select v_user, 'Subject ' || g
+    from generate_series(1, 50 - (select count(*) from public.subjects where user_id = v_user)) g;
+  begin
+    insert into public.subjects (user_id, name) values (v_user, 'One too many');
+  exception when check_violation then v_blocked := true;
+  end;
+  assert v_blocked, 'subjects has no per-user row ceiling';
+end $$;
+
+-- display_name was the one client-writable text column with no length limit.
+do $$
+declare v_blocked boolean := false;
+begin
+  update public.profiles set display_name = repeat('x', 80)
+   where id = '11111111-1111-1111-1111-111111111111';
+  begin
+    update public.profiles set display_name = repeat('x', 81)
+     where id = '11111111-1111-1111-1111-111111111111';
+  exception when check_violation then v_blocked := true;
+  end;
+  assert v_blocked, 'display_name accepted more than 80 characters';
+end $$;
+
+-- The price lists must stay read-only, or a client could set a price to zero.
+do $$
+declare v_blocked boolean;
+begin
+  v_blocked := false;
+  begin
+    update public.catalog_items set price = 0 where slug = 'piano';
+    v_blocked := true;
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+  assert v_blocked and (select price > 0 from public.catalog_items where slug = 'piano'),
+    'the client could reprice a catalog item';
+
+  v_blocked := false;
+  begin
+    insert into public.cat_foods (slug, name, price, art_key) values ('free', 'Free', 2, 'kibble');
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+  assert v_blocked, 'the client could add a treat to the menu';
+end $$;
+
 rollback;
 
 \echo ''

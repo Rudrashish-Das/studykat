@@ -61,7 +61,9 @@ export function friendlyAuthError(raw: string): string {
     return 'Confirm your email first — check your inbox for the link we sent.'
   }
   if (message.includes('user already registered') || message.includes('already been registered')) {
-    return 'There is already an account with that email. Try logging in instead.'
+    // Deliberately vague: saying "that email has an account" would let anyone
+    // check whether an address is registered.
+    return 'Could not create that account. If you already have one, try logging in or resetting your password.'
   }
   if (message.includes('password should be at least')) {
     return 'Passwords need to be at least 8 characters.'

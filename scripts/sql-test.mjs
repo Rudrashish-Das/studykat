@@ -129,9 +129,17 @@ async function checkRlsCoverage(db) {
     `${green('  ok')}  readable signed-out: ${anonRows.map((r) => r.tablename).join(', ') || '(none)'}`,
   )
 
-  // These five are the economy. If any of them ever gains a write policy, the
-  // anon key stops being safe to publish.
-  const mustBeReadOnly = ['wallet', 'transactions', 'streaks', 'study_sessions', 'inventory']
+  // These five are the economy, and the last two are its price lists. If any of
+  // them ever gains a write policy, the anon key stops being safe to publish.
+  const mustBeReadOnly = [
+    'wallet',
+    'transactions',
+    'streaks',
+    'study_sessions',
+    'inventory',
+    'catalog_items',
+    'cat_foods',
+  ]
   const leaked = mustBeReadOnly.filter((t) => writable.includes(t))
   if (leaked.length > 0) {
     console.log(`${red('fail')}  these must never be client-writable: ${leaked.join(', ')}`)

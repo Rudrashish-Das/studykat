@@ -16,6 +16,82 @@ item.
 
 ---
 
+## Second pass, 2026-09-22
+
+Scope: everything added since the first audit below — the treats feature
+(`0013_cat_food.sql`, `feed_cat`), the art migrations (0008–0012), the room
+surface changes — plus a re-check of the whole schema, the client, and the
+build. The first audit's fixes all still hold. Nothing high or critical.
+
+**`feed_cat` is sound.** Price read from `cat_foods`, never from the client;
+the wallet row is locked for the check-and-debit; the spend is logged;
+`EXECUTE` is `authenticated`-only; `cat_foods` has RLS on and no client write
+grants.
+
+### Fixed
+
+#### 7. `profiles.display_name` had no length limit — *low–medium*
+
+The one client-writable free-text column with no `CHECK`. A single account
+could write megabytes into it per request on a free-tier database.
+
+**Fixed** in `0014_bounded_user_writes.sql`: capped at 80 characters, with
+existing values trimmed first. The signup trigger now truncates the name it
+copies out of `raw_user_meta_data` — which an email signup can set to anything
+— so an oversized name shortens instead of failing the signup.
+
+#### 8. No row ceiling on `subjects` — *low–medium*
+
+The same shape as finding 5, on the other table the client owns outright: a
+loop could insert subjects forever. Its policy also had no regression tests.
+
+**Fixed** with a 50-per-user ceiling enforced by trigger (archived subjects
+count). The suite now asserts the ceiling and that one user cannot read, edit,
+delete, or plant another user's subjects.
+
+#### 9. Signup error revealed whether an email was registered — *low*
+
+`friendlyAuthError` said "there is already an account with that email", despite
+its own comment promising not to leak that. **Fixed** with a message that does
+not confirm either way. (With email confirmation on, Supabase hides this
+itself; this closes it when confirmation is off.)
+
+#### 10. Production source maps were published — *low*
+
+`build.sourcemap: true` put full source, comments and all, on the live site.
+**Fixed** by turning them off; `vite build --sourcemap` still produces them for
+local debugging.
+
+#### 11. No Content Security Policy — *hardening*
+
+GitHub Pages cannot send headers, so a build-only Vite plugin in
+`vite.config.ts` injects a `<meta>` CSP: scripts from self plus the theme
+script by hash (computed from the final HTML), styles and fonts from self and
+Google Fonts, connections only to self and the Supabase project. Checked
+against the built site: it renders, fonts load, the theme script runs,
+Supabase is reachable, and a fetch to any other origin is refused.
+`frame-ancestors` cannot be set from a meta tag, so clickjacking protection
+still needs a host that sends headers.
+
+#### 12. Price lists not covered by the read-only invariant — *hardening*
+
+`scripts/sql-test.mjs` now fails the build if `catalog_items` or `cat_foods`
+ever gains a write policy, alongside the five economy tables, and the suite
+asserts a client cannot reprice an item or add a treat.
+
+### Not verifiable from the repository
+
+These live in the Supabase dashboard and should be checked there:
+
+- Migrations 0008–0014 are applied to the live project.
+- The server-side minimum password length is at least 8. The client checks 8,
+  but a direct API call bypasses the client.
+- Email confirmation and leaked-password protection are on.
+- The redirect allow-list holds only the production origin (and localhost for
+  development).
+
+---
+
 ## Audit, 2026-09-22
 
 Scope: the SQL migrations, the row-level security policies, the client's data
