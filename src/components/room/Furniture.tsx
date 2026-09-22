@@ -1142,15 +1142,39 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </g>
   ),
 
-  clock: ({ mat, side }) => (
-    <OnWall side={side}>
-      <g transform="translate(0, -68)">
-        <circle cx="0" cy="0" r="14" fill={mat.top} />
-        <circle cx="0" cy="0" r="9.5" fill={mat.accent} strokeWidth="1.2" />
-        <ClockHands cx={0} cy={0} hour={4.8} minute={7.2} width={1.6} />
+  clock: ({ mat, side }) => {
+    // A flat disc sheared onto the wall is just a tilted oval, and read as a
+    // plate hung crooked. The case has depth: its back on the wall, its face
+    // a little way out toward the viewer, so the rim shows as a crescent.
+    const out = wallBoxTop(side, 0.12, 0)
+    return (
+      <g>
+        <OnWall side={side}>
+          <circle cx="0" cy="-68" r="14" fill={mat.right} />
+        </OnWall>
+        <g transform={`translate(${out.x}, ${out.y})`}>
+          <OnWall side={side}>
+            <g transform="translate(0, -68)">
+              <circle cx="0" cy="0" r="14" fill={mat.top} />
+              <circle cx="0" cy="0" r="10.5" fill={mat.accent} strokeWidth="1.2" />
+              {/* Bars at the quarters, dots for the other hours. */}
+              {Array.from({ length: 12 }, (_, i) => {
+                const a = (i * Math.PI) / 6
+                const [sx, sy] = [Math.sin(a), -Math.cos(a)]
+                return i % 3 === 0 ? (
+                  <path key={i} d={`M${sx * 7.4} ${sy * 7.4} L${sx * 9.2} ${sy * 9.2}`} strokeWidth="1.2" />
+                ) : (
+                  <circle key={i} cx={sx * 8.6} cy={sy * 8.6} r="0.6" fill={OUTLINE} stroke="none" />
+                )
+              })}
+              <ClockHands cx={0} cy={0} hour={4.6} minute={6.8} width={1.5} />
+              <circle cx="0" cy="0" r="1.3" fill={OUTLINE} stroke="none" />
+            </g>
+          </OnWall>
+        </g>
       </g>
-    </OnWall>
-  ),
+    )
+  },
 
   windowbox: ({ mat, side }) => {
     // A window with the planter on its sill, so the box has something to hang from.
