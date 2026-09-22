@@ -874,7 +874,39 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     <WallPanel side={side} width={40} height={32} lift={72} fill={mat.right} accent={mat.accent} />
   ),
   starmap: ({ mat, side }) => (
-    <WallPanel side={side} width={50} height={38} lift={78} fill={mat.right} accent="#7fa8c4" />
+    <g>
+      <WallPanel side={side} width={50} height={38} lift={78} fill={mat.right} accent="#34466e" />
+      {/* A night sky inside the frame: one constellation, a scatter of stars and a moon. */}
+      <OnWall side={side}>
+        <path
+          d="M-14 -50 L-7 -60 L2 -56 L9 -66 L15 -61"
+          fill="none"
+          stroke="#c9d6ec"
+          strokeWidth="0.8"
+          opacity="0.7"
+        />
+        {[
+          [-14, -50, 1.5],
+          [-7, -60, 1.8],
+          [2, -56, 1.4],
+          [9, -66, 1.9],
+          [15, -61, 1.4],
+        ].map(([x, y, r]) => (
+          <circle key={`${x},${y}`} cx={x} cy={y} r={r} fill="#fff4d0" stroke="none" />
+        ))}
+        {[
+          [-18, -56],
+          [-3, -68],
+          [6, -48],
+          [16, -50],
+          [-9, -47],
+          [12, -54],
+        ].map(([x, y]) => (
+          <circle key={`${x},${y}`} cx={x} cy={y} r="0.7" fill="#e3ebf7" stroke="none" opacity="0.85" />
+        ))}
+        <path d="M-15 -66 A3.2 3.2 0 1 0 -11.5 -61.2 A2.6 2.6 0 1 1 -15 -66 Z" fill="#f5e3a8" stroke="none" />
+      </OnWall>
+    </g>
   ),
 
   clock: ({ mat, side }) => (
