@@ -204,7 +204,7 @@ function WeeklyBars({ days }: { days: DailyTotal[] }) {
         ))}
       </div>
       <p className="mt-2 text-xs text-ink-faint">
-        Twelve weeks, oldest first. Tallest week: {formatMinutes(max)}.
+        Tallest week: {formatMinutes(max)}.
       </p>
     </div>
   )
