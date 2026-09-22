@@ -3,10 +3,25 @@ import { App } from '@/App'
 import { paths } from '@/lib/paths'
 
 /**
- * These run with no Supabase credentials compiled in, which is also how a
- * freshly deployed site behaves before its repository variables are set. The
- * app must still render and explain itself rather than showing a white screen.
+ * Pin the environment rather than inheriting it.
+ *
+ * `import.meta.env` is populated from `.env.local` when one exists, so without
+ * this the suite passed or failed depending on whether the machine running it
+ * happened to have Supabase credentials — green in CI, red as soon as a
+ * developer configured the app locally. With credentials present the provider
+ * starts in its loading state and renders a spinner instead of the landing
+ * page, which is correct behaviour and a broken test.
+ *
+ * Unconfigured is also how a freshly deployed site behaves before its
+ * repository variables are set, so it is the state worth asserting: the app
+ * must still render and explain itself rather than showing a white screen.
  */
+vi.mock('@/lib/env', () => ({
+  isSupabaseConfigured: false,
+  supabaseConfig: null,
+  authRedirectTo: () => 'http://localhost:5173/',
+}))
+
 describe('app shell', () => {
   it('renders the landing screen at the default hash route', () => {
     render(<App />)
