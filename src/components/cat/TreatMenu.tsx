@@ -52,7 +52,10 @@ export function TreatMenu({
     }
   }
 
-  if (!foods.data || foods.data.length === 0) return null
+  // Only a settled, genuinely empty catalog hides the section — while it is
+  // still loading, `data` is undefined and the section stays mounted, so it
+  // does not pop in (and shove the rest of the page down) after the first paint.
+  if (foods.data && foods.data.length === 0) return null
 
   return (
     <section
@@ -103,7 +106,7 @@ export function TreatMenu({
         )}
 
         <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3">
-          {foods.data.map((food) => {
+          {(foods.data ?? []).map((food) => {
             const affordable = coins >= food.price
             const busy = feed.isPending && feed.variables?.id === food.id
             return (
