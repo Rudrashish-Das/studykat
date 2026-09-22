@@ -211,3 +211,76 @@
   50%      { opacity: 0.8; }
 }
 .sc-cat-sparkle { animation: sc-sparkle 3.7s ease-in-out infinite; }
+
+/* ------------------------------------------------------ cat and its things --
+   What the cat does with the room: paws for play, the toy answering back, and
+   the little signs above its head. Also silenced by the reduced-motion block. */
+
+@keyframes sc-bat {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  30%      { transform: translate(-6px, -8px) rotate(-18deg); }
+  55%      { transform: translate(4px, 6px) rotate(8deg); }
+}
+.sc-cat-bat { animation: sc-bat 0.9s ease-in-out infinite; }
+
+@keyframes sc-knead {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(7px); }
+}
+.sc-cat-knead-left  { animation: sc-knead 0.7s ease-in-out infinite; }
+.sc-cat-knead-right { animation: sc-knead 0.7s ease-in-out -0.35s infinite; }
+
+/* Each object moves about its own box, and only its body moves: the contact
+   shadow stays on the floor, so everything keeps small enough to stay over
+   it. The ball spins where it lies, the wand sways from its handle, plants
+   rustle from the pot. */
+.sc-item-roll,
+.sc-item-sway,
+.sc-item-shake,
+.sc-item-rustle { transform-box: fill-box; }
+.sc-item-roll   { transform-origin: center; }
+.sc-item-sway   { transform-origin: left bottom; }
+.sc-item-shake,
+.sc-item-rustle { transform-origin: center bottom; }
+
+@keyframes sc-roll {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  30%      { transform: translateX(2px) rotate(60deg); }
+  65%      { transform: translateX(-2px) rotate(-50deg); }
+}
+.sc-item-roll { animation: sc-roll 1.3s ease-in-out infinite; }
+
+@keyframes sc-sway {
+  0%, 100% { transform: rotate(0deg); }
+  30%      { transform: rotate(-8deg); }
+  65%      { transform: rotate(6deg); }
+}
+.sc-item-sway { animation: sc-sway 0.8s ease-in-out infinite; }
+
+@keyframes sc-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-1.2deg); }
+  75%      { transform: rotate(1.2deg); }
+}
+.sc-item-shake { animation: sc-shake 0.35s linear infinite; }
+
+@keyframes sc-rustle {
+  0%, 100% { transform: skewX(0deg); }
+  40%      { transform: skewX(-4deg); }
+  70%      { transform: skewX(3deg); }
+}
+.sc-item-rustle { animation: sc-rustle 1.6s ease-in-out infinite; }
+
+@keyframes sc-float-up {
+  0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateY(-34px) scale(1); opacity: 0; }
+}
+.sc-cat-heart { animation: sc-float-up 1.6s ease-out forwards; }
+.sc-cat-zzz   { animation: sc-float-up 3.2s ease-out infinite; }
+
+/* The cat's hit target: no button chrome, but a clear focus ring. */
+.sc-cat-button { cursor: pointer; background: none; border: 0; padding: 0; }
+.sc-cat-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 9999px; }
+.sc-room-thing:focus-visible { outline: none; }
+.sc-room-thing:focus-visible svg { filter: drop-shadow(0 0 3px rgba(74, 59, 52, 0.7)); }

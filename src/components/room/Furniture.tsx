@@ -1236,7 +1236,13 @@ export const Furniture = memo(function Furniture({
   ghost,
   wallSide = 'right',
   wallIndex,
+  motionClass,
 }: {
+  /**
+   * Animates the object but not its contact shadow, which stays put on the
+   * floor — a shadow that rolls about with the toy looks like a sticker.
+   */
+  motionClass?: string | undefined
   artKey: string
   footprintW?: number
   footprintH?: number
@@ -1287,7 +1293,7 @@ export const Furniture = memo(function Furniture({
       style={ghost === 'invalid' ? { filter: 'hue-rotate(-40deg) saturate(2.2)' } : undefined}
     >
       {shadow && !ghost && !NO_SHADOW_SHAPES.has(shape) && <ContactShadow w={size.w} h={size.h} />}
-      {body}
+      {motionClass ? <g className={motionClass}>{body}</g> : body}
     </g>
   )
 })

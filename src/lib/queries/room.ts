@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { requireSupabase } from '@/lib/supabase/client'
 import { useAuth, useUserId } from '@/lib/auth'
 import { keys as sessionKeys } from './sessions'
@@ -59,13 +60,17 @@ export function usePlacedItems(): { placed: PlacedItem[]; isPending: boolean } {
   const catalog = useCatalog()
   const layout = useRoomLayout()
 
-  const byId = new Map((catalog.data ?? []).map((item) => [item.id, item]))
-  const placed = (layout.data ?? [])
-    .map((row) => {
-      const item = byId.get(row.item_id)
-      return item ? { ...row, item } : null
-    })
-    .filter((x): x is PlacedItem => x !== null)
+  // Kept stable between renders: the cat's routine and the room's depth sort
+  // both key off this array.
+  const placed = useMemo(() => {
+    const byId = new Map((catalog.data ?? []).map((item) => [item.id, item]))
+    return (layout.data ?? [])
+      .map((row) => {
+        const item = byId.get(row.item_id)
+        return item ? { ...row, item } : null
+      })
+      .filter((x): x is PlacedItem => x !== null)
+  }, [catalog.data, layout.data])
 
   return { placed, isPending: catalog.isPending || layout.isPending }
 }

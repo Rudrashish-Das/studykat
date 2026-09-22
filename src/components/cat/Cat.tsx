@@ -16,7 +16,17 @@ import { cn } from '@/lib/cn'
  * so markings can never spill past the outline.
  */
 
-export type CatPose = 'idle' | 'studying' | 'sleeping' | 'happy'
+export type CatPose =
+  | 'idle'
+  | 'studying'
+  | 'sleeping'
+  | 'happy'
+  /** Batting at a toy, one paw up. */
+  | 'playing'
+  /** Up on its back legs at a scratching post. */
+  | 'scratching'
+  /** Head down, eyes wide: sniffing or staring at something. */
+  | 'curious'
 
 const OUTLINE = '#4a3b34'
 
@@ -55,8 +65,9 @@ export const Cat = memo(function Cat({
     )
   }
 
-  // Studying: head dips toward the desk and the tail settles.
-  const headDip = pose === 'studying' ? 3 : 0
+  // Studying: head dips toward the desk and the tail settles. Curious: lower
+  // still, nose first.
+  const headDip = pose === 'studying' ? 3 : pose === 'curious' ? 5 : 0
 
   return (
     <svg
@@ -101,7 +112,7 @@ export const Cat = memo(function Cat({
         <path d={BODY_PATH} fill="none" />
 
         {/* Front paws, and the socks that sit on them */}
-        <Paws appearance={appearance} />
+        <Paws appearance={appearance} pose={pose} animate={animate} />
 
         {/* Head */}
         <Ears appearance={appearance} dip={headDip} animate={animate} />
@@ -155,7 +166,7 @@ function Tail({
       ? 'M86 98 C 96 98 100 92 98 86'
       : tail === 'curl'
         ? 'M86 98 C 102 100 108 88 100 80 C 95 75 88 78 90 84'
-        : pose === 'happy'
+        : pose === 'happy' || pose === 'playing' || pose === 'scratching'
           ? 'M86 96 C 104 94 110 76 104 60'
           : 'M86 98 C 104 98 110 84 104 70'
 
@@ -172,16 +183,44 @@ function Tail({
   )
 }
 
-function Paws({ appearance }: { appearance: CatAppearance }) {
+function Paws({
+  appearance,
+  pose,
+  animate,
+}: {
+  appearance: CatAppearance
+  pose: CatPose
+  animate: boolean
+}) {
   const { coat, socks } = appearance
   // Socks are drawn front-left, front-right, then hinted at the back.
   const front = Math.min(socks, 2)
   const sock = '#f3e8d8'
+  // Playing lifts the left paw to bat with; scratching raises both, and they
+  // take turns.
+  const leftUp = pose === 'playing' || pose === 'scratching'
+  const rightUp = pose === 'scratching'
+  const raised = (up: boolean, cls: string) =>
+    up ? { cy: 80, className: animate ? cls : undefined } : { cy: 104 }
 
   return (
     <g>
-      <ellipse cx="48" cy="104" rx="9" ry="6" fill={front >= 1 ? sock : coat.body} />
-      <ellipse cx="72" cy="104" rx="9" ry="6" fill={front >= 2 ? sock : coat.body} />
+      <ellipse
+        cx="48"
+        rx="9"
+        ry="6"
+        fill={front >= 1 ? sock : coat.body}
+        {...raised(leftUp, pose === 'playing' ? 'sc-cat-bat' : 'sc-cat-knead-left')}
+        style={{ transformOrigin: '48px 92px' }}
+      />
+      <ellipse
+        cx="72"
+        rx="9"
+        ry="6"
+        fill={front >= 2 ? sock : coat.body}
+        {...raised(rightUp, 'sc-cat-knead-right')}
+        style={{ transformOrigin: '72px 92px' }}
+      />
       {socks >= 3 && <ellipse cx="34" cy="99" rx="5" ry="4" fill={sock} />}
       {socks >= 4 && <ellipse cx="86" cy="99" rx="5" ry="4" fill={sock} />}
     </g>
@@ -327,7 +366,9 @@ function Face({
 
   // Happy cats close their eyes into arcs; studying cats narrow them.
   const closed = pose === 'happy'
-  const narrow = pose === 'studying'
+  const narrow = pose === 'studying' || pose === 'scratching'
+  // Hunting eyes: pupils blown wide.
+  const wide = pose === 'playing' || pose === 'curious'
 
   return (
     <g>
@@ -340,8 +381,8 @@ function Face({
         </g>
       ) : (
         <g className={animate ? 'sc-cat-blink' : undefined} style={{ transformOrigin: `60px ${y(48)}px` }}>
-          <Eye cx={leftEye.x} cy={leftEye.y} color={eye} narrow={narrow} />
-          <Eye cx={rightEye.x} cy={rightEye.y} color={eyeRight ?? eye} narrow={narrow} />
+          <Eye cx={leftEye.x} cy={leftEye.y} color={eye} narrow={narrow} wide={wide} />
+          <Eye cx={rightEye.x} cy={rightEye.y} color={eyeRight ?? eye} narrow={narrow} wide={wide} />
         </g>
       )}
 
@@ -370,16 +411,25 @@ function Eye({
   cy,
   color,
   narrow,
+  wide = false,
 }: {
   cx: number
   cy: number
   color: string
   narrow: boolean
+  wide?: boolean
 }) {
   return (
     <g>
       <ellipse cx={cx} cy={cy} rx="5" ry={narrow ? 3 : 5.5} fill={color} strokeWidth="1.8" />
-      <ellipse cx={cx} cy={cy} rx="1.8" ry={narrow ? 2.2 : 4} fill={OUTLINE} stroke="none" />
+      <ellipse
+        cx={cx}
+        cy={cy}
+        rx={wide ? 3.4 : 1.8}
+        ry={narrow ? 2.2 : wide ? 4.4 : 4}
+        fill={OUTLINE}
+        stroke="none"
+      />
       {/* One catchlight, upper-left, matching the world's fixed light. */}
       <circle cx={cx - 1.6} cy={cy - 2} r="1.3" fill="#fffaf2" stroke="none" opacity="0.9" />
     </g>

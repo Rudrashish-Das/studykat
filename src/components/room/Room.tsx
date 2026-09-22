@@ -8,6 +8,7 @@ import {
   depthOf,
   depthSort,
   diamondPoints,
+  rotatedFootprint,
   toGrid,
   toScreen,
   wallSpotOf,
@@ -30,6 +31,21 @@ export interface RoomProps {
   cat: CatAppearance
   catPose: CatPose
   catTile: { gx: number; gy: number }
+  /** Which way the cat is looking; it walks tail-first otherwise. */
+  catFacing?: 'left' | 'right'
+  /** Up on a piece of furniture rather than on the floor. */
+  catPerch?: { itemId: string; lift: number } | null
+  /** Hearts after a pat, or z's while asleep. */
+  catEffect?: 'hearts' | 'zzz' | null
+  /** Changes on every pat so the hearts replay. */
+  catPats?: number
+  /** The item the cat is playing with, and how it moves. */
+  activeItem?: { id: string; motion: 'roll' | 'sway' | 'shake' | 'rustle' | null } | null
+  /** Makes the cat a button. Home only: the editor needs clicks to reach the items. */
+  onCatClick?: () => void
+  catName?: string
+  /** Outside the editor, tapping an object sends the cat to it. */
+  onItemVisit?: (id: string) => void
   /** 0 (noon) to 1 (deep night); drives the tint overlay. */
   nightness?: number
   className?: string
@@ -55,6 +71,14 @@ export function Room({
   cat,
   catPose,
   catTile,
+  catFacing = 'left',
+  catPerch = null,
+  catEffect = null,
+  catPats = 0,
+  activeItem = null,
+  onCatClick,
+  catName = 'the cat',
+  onItemVisit,
   nightness = 0,
   className,
   interactive = false,
@@ -104,16 +128,37 @@ export function Room({
         placed: p,
       }),
     )
+    // A perched cat sorts just after what it is sitting on.
+    const seat = catPerch ? items.find((d) => d.id === catPerch.itemId) : undefined
     items.push({
       id: '__cat__',
       kind: 'cat',
-      gx: catTile.gx,
-      gy: catTile.gy,
+      gx: seat ? seat.gx : catTile.gx,
+      gy: seat ? seat.gy : catTile.gy,
       layer: 2,
-      zIndex: 50,
+      zIndex: seat ? seat.zIndex + 0.5 : 50,
     })
     return depthSort(items)
-  }, [objects, catTile.gx, catTile.gy])
+  }, [objects, catTile.gx, catTile.gy, catPerch])
+
+  // Paint order becomes z-index, so the DOM order can stay put: reordering the
+  // nodes on every step would cancel the cat's walking transition.
+  const stacking = useMemo(
+    () => new Map(drawables.map((d, index) => [d.id, index + 1])),
+    [drawables],
+  )
+  const drawnAt = useMemo(() => new Map(drawables.map((d) => [d.id, d])), [drawables])
+
+  /** Where the cat's feet go: its tile, or the middle of whatever it is on. */
+  const catSpot = useMemo(() => {
+    const seat = catPerch ? objects.find((p) => p.id === catPerch.itemId) : undefined
+    if (!seat || !catPerch) return { ...toScreen(catTile.gx, catTile.gy), lift: 0 }
+    const size = rotatedFootprint(seat.item.footprint_w, seat.item.footprint_h, seat.rotation)
+    return {
+      ...toScreen(seat.grid_x + size.w / 2 - 0.5, seat.grid_y + size.h / 2 - 0.5),
+      lift: catPerch.lift,
+    }
+  }, [catPerch, catTile.gx, catTile.gy, objects])
 
   const pointerToTile = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -210,45 +255,48 @@ export function Room({
             className="absolute left-0 top-0 origin-top-left"
             style={{ width: ROOM_W, height: ROOM_H, transform: `scale(${scale})` }}
           >
-              {drawables.map((drawable) => {
-                const screen = toScreen(drawable.gx, drawable.gy)
-                if (drawable.kind === 'cat') {
-                  return (
-                    <div
-                      key="cat"
-                      className="pointer-events-none absolute"
-                      style={{ left: screen.x, top: screen.y, width: 0, height: 0 }}
-                    >
-                      <div
-                        className="absolute"
-                        style={{ left: -CAT_WIDTH / 2, top: CAT_TOP, width: CAT_WIDTH }}
-                      >
-                        <Cat appearance={cat} pose={catPose} animate={!reducedMotion} />
-                      </div>
-                    </div>
-                  )
-                }
-
-                const p = drawable.placed!
+              {objects.map((p) => {
+                const drawn = drawnAt.get(p.id)!
+                const screen = toScreen(drawn.gx, drawn.gy)
                 const selected = selectedId === p.id
                 const wall = wallSpotOf(p.grid_x, p.grid_y)
+                // Outside the editor, a tap sends the cat over instead.
+                const visitable = !interactive && Boolean(onItemVisit)
+                const motion = activeItem?.id === p.id ? activeItem.motion : null
+                const visit = () => onItemVisit?.(p.id)
                 return (
                   <div
                     key={p.id}
-                    className={cn('absolute', interactive ? 'cursor-pointer' : 'pointer-events-none')}
-                    style={{ left: screen.x, top: screen.y, width: 0, height: 0 }}
+                    className={cn(
+                      'absolute',
+                      interactive || visitable ? 'cursor-pointer' : 'pointer-events-none',
+                      visitable && 'sc-room-thing',
+                    )}
+                    style={{ left: screen.x, top: screen.y, width: 0, height: 0, zIndex: stacking.get(p.id) }}
                     onPointerDown={(event) => {
                       if (!interactive) return
                       event.stopPropagation()
                       onItemClick?.(p.id)
                     }}
+                    {...(visitable && {
+                      role: 'button',
+                      tabIndex: 0,
+                      'aria-label': `Send ${catName} to the ${p.item.name.toLowerCase()}`,
+                      onClick: visit,
+                      onKeyDown: (event: React.KeyboardEvent) => {
+                        if (event.key !== 'Enter' && event.key !== ' ') return
+                        event.preventDefault()
+                        visit()
+                      },
+                    })}
                   >
                     <svg
                       width="1"
                       height="1"
                       style={{ overflow: 'visible' }}
-                      role={interactive ? 'button' : 'img'}
-                      aria-label={p.item.name}
+                      role={interactive ? 'button' : visitable ? undefined : 'img'}
+                      aria-label={visitable ? undefined : p.item.name}
+                      aria-hidden={visitable || undefined}
                       tabIndex={interactive ? 0 : -1}
                       className={selected ? 'sc-selected' : undefined}
                     >
@@ -259,11 +307,52 @@ export function Room({
                         rotation={p.rotation}
                         wallSide={wall.side}
                         wallIndex={wall.index}
+                        motionClass={motion ? `sc-item-${motion}` : undefined}
                       />
                     </svg>
                   </div>
                 )
               })}
+
+              <div
+                className={cn(
+                  'absolute',
+                  !onCatClick && 'pointer-events-none',
+                  // One tile per step, gliding rather than hopping.
+                  'transition-[left,top] duration-[900ms] ease-linear',
+                )}
+                style={{
+                  left: catSpot.x,
+                  top: catSpot.y,
+                  width: 0,
+                  height: 0,
+                  zIndex: stacking.get('__cat__'),
+                }}
+              >
+                <div
+                  className="absolute transition-transform duration-300 ease-out"
+                  style={{
+                    left: -CAT_WIDTH / 2,
+                    top: CAT_TOP,
+                    width: CAT_WIDTH,
+                    transform: `translateY(${-catSpot.lift}px)`,
+                  }}
+                >
+                  {onCatClick ? (
+                    <button
+                      type="button"
+                      className="sc-cat-button block w-full text-ink"
+                      onClick={onCatClick}
+                      aria-label={`Pet ${catName}`}
+                    >
+                      <CatFigure appearance={cat} pose={catPose} facing={catFacing} animate={!reducedMotion} />
+                    </button>
+                  ) : (
+                    <CatFigure appearance={cat} pose={catPose} facing={catFacing} animate={!reducedMotion} />
+                  )}
+                  <CatEffect effect={catEffect} pats={catPats} />
+                </div>
+              </div>
 
               {/* The drag preview sits above everything: it is UI, not scenery. */}
               {ghost && (
@@ -302,6 +391,98 @@ export function Room({
         )}
       </div>
     </div>
+  )
+}
+
+function CatFigure({
+  appearance,
+  pose,
+  facing,
+  animate,
+}: {
+  appearance: CatAppearance
+  pose: CatPose
+  facing: 'left' | 'right'
+  animate: boolean
+}) {
+  // The drawing has its tail on the right, so as drawn it is heading left; a
+  // cat heading right is mirrored so the tail trails behind it.
+  return (
+    <div style={{ transform: facing === 'right' ? 'scaleX(-1)' : undefined }}>
+      <Cat appearance={appearance} pose={pose} animate={animate} />
+    </div>
+  )
+}
+
+const HEARTS = [
+  { x: 6, y: 20, delay: 0 },
+  { x: 20, y: 12, delay: 0.25 },
+  { x: 34, y: 20, delay: 0.5 },
+]
+
+/** Hearts rising from a petted cat, or slow z's from a sleeping one. */
+function CatEffect({ effect, pats }: { effect: 'hearts' | 'zzz' | null; pats: number }) {
+  if (effect === 'zzz') {
+    return (
+      <svg
+        aria-hidden
+        className="pointer-events-none absolute overflow-visible"
+        style={{ left: '64%', top: 0 }}
+        width="30"
+        height="30"
+        viewBox="0 0 30 30"
+      >
+        {[0, 1].map((i) => (
+          <text
+            key={i}
+            x={4 + i * 10}
+            y={24 - i * 8}
+            className="sc-cat-zzz"
+            style={{
+              animationDelay: `${i * 1.6}s`,
+              font: '700 12px ui-rounded, system-ui, sans-serif',
+              transformBox: 'fill-box',
+              transformOrigin: 'center',
+            }}
+            fill={OUTLINE}
+            fillOpacity="0.7"
+          >
+            z
+          </text>
+        ))}
+      </svg>
+    )
+  }
+  if (effect !== 'hearts') return null
+  return (
+    // Keyed by the pat count, so each pat plays the hearts from the start.
+    <svg
+      key={pats}
+      aria-hidden
+      className="pointer-events-none absolute overflow-visible"
+      style={{ left: '20%', top: -8 }}
+      width="40"
+      height="30"
+      viewBox="0 0 40 30"
+    >
+      {HEARTS.map((h) => (
+        <path
+          key={h.x}
+          className="sc-cat-heart"
+          style={{
+            animationDelay: `${h.delay}s`,
+            opacity: 0,
+            transformBox: 'fill-box',
+            transformOrigin: 'center',
+          }}
+          d={`M${h.x} ${h.y} c -4 -3 -7 -6 -4 -9 c 2 -2 4 -1 4 1 c 0 -2 2 -3 4 -1 c 3 3 0 6 -4 9 z`}
+          fill="#d9a5a0"
+          stroke={OUTLINE}
+          strokeWidth="1.2"
+          strokeLinejoin="round"
+        />
+      ))}
+    </svg>
   )
 }
 

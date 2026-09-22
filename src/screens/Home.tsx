@@ -10,7 +10,7 @@ import { usePlacedItems } from '@/lib/queries/room'
 import { useActiveSession, useStartSession, useSubjects, useToday } from '@/lib/queries/sessions'
 import { SubjectPicker } from '@/components/session/SubjectPicker'
 import { poseForContext } from '@/lib/cat/pose'
-import { useCatWander } from '@/lib/cat/useCatWander'
+import { useCatLife } from '@/lib/cat/useCatLife'
 import { streakNudge } from '@/lib/economy/streak'
 import { paths } from '@/lib/paths'
 import { formatMinutes } from '@/lib/timer'
@@ -61,11 +61,8 @@ export function Home() {
 
   const appearance = useCatAppearance(profile)
 
-  const pose = poseForContext({ now, timeZone, sessionActive: false })
-  const catTile = useCatWander({
-    placed,
-    mode: pose === 'sleeping' ? 'still' : 'wander',
-  })
+  const bedtime = poseForContext({ now, timeZone, sessionActive: false }) === 'sleeping'
+  const catLife = useCatLife({ placed, asleep: bedtime, catName: profile?.cat_name ?? 'Your cat' })
 
   if (!profile || !appearance || roomPending) {
     return <FullScreenSpinner label="Opening the door" />
@@ -86,10 +83,8 @@ export function Home() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl">{profile.cat_name}&apos;s room</h1>
-          <p className="text-sm text-ink-soft">
-            {pose === 'sleeping'
-              ? `${profile.cat_name} is asleep. You can still study.`
-              : `${profile.cat_name} is pottering about.`}
+          <p className="text-sm text-ink-soft" aria-live="polite">
+            {catLife.description}
           </p>
         </div>
         <Hud
@@ -104,8 +99,16 @@ export function Home() {
       <Room
         placed={placed}
         cat={appearance}
-        catPose={pose}
-        catTile={catTile}
+        catPose={catLife.pose}
+        catTile={catLife.tile}
+        catFacing={catLife.facing}
+        catPerch={catLife.perch}
+        catEffect={catLife.effect}
+        catPats={catLife.pats}
+        activeItem={catLife.activeItem}
+        catName={profile.cat_name}
+        onCatClick={catLife.pet}
+        onItemVisit={catLife.visit}
         nightness={nightnessFor(localTimeOfDay(now, timeZone))}
         className="mt-5"
       />
