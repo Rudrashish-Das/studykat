@@ -23,6 +23,7 @@ import { Furniture } from './Furniture'
 import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey } from './materials'
 import type { CatalogItem, RoomLayoutRow } from '@/lib/supabase/types'
 import { cn } from '@/lib/cn'
+import { activeSurface, isSurface } from './surfaces'
 import { useElementWidth, usePrefersReducedMotion } from '@/lib/useReducedMotion'
 
 export interface PlacedItem extends RoomLayoutRow {
@@ -110,20 +111,16 @@ export function Room({
 
   // Room-wide surfaces are placements too, but they are not objects: the
   // renderer reads whichever the user owns and ignores its grid cell.
-  const surfaces = useMemo(() => {
-    const find = (category: string) =>
-      placed.find((p) => p.item.category === category)?.item ?? null
-    return {
-      floor: find('floor'),
-      wall: find('wall'),
-      wash: find('wallcolor'),
-    }
-  }, [placed])
-
-  const objects = useMemo(
-    () => placed.filter((p) => !['floor', 'wall', 'wallcolor'].includes(p.item.category)),
+  const surfaces = useMemo(
+    () => ({
+      floor: activeSurface(placed, 'floor')?.item ?? null,
+      wall: activeSurface(placed, 'wall')?.item ?? null,
+      wash: activeSurface(placed, 'wallcolor')?.item ?? null,
+    }),
     [placed],
   )
+
+  const objects = useMemo(() => placed.filter((p) => !isSurface(p.item)), [placed])
 
   /**
    * A toy the cat is playing with up close. It comes over beside the toy, on

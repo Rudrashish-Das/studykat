@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Room } from '@/components/room/Room'
+import {
+  SURFACE_CATEGORIES,
+  activeSurface,
+  isSurface,
+  type SurfaceCategory,
+} from '@/components/room/surfaces'
 import { Furniture } from '@/components/room/Furniture'
 import { Button } from '@/components/ui/Button'
 import { Notice } from '@/components/ui/Notice'
@@ -43,14 +49,55 @@ export function RoomEditor() {
 
   const selected = placed.find((p) => p.id === selectedId) ?? null
 
-  /** Everything owned but not currently in the room. */
-  const stored = useMemo(() => {
-    const placedIds = new Set(placed.map((p) => p.item_id))
+  const owned = useMemo(() => {
     const byId = new Map((catalog.data ?? []).map((item) => [item.id, item]))
     return (inventory.data ?? [])
       .map((row) => byId.get(row.item_id))
-      .filter((item): item is CatalogItem => item !== undefined && !placedIds.has(item.id))
-  }, [placed, inventory.data, catalog.data])
+      .filter((item): item is CatalogItem => item !== undefined)
+  }, [inventory.data, catalog.data])
+
+  /** Everything owned but not currently in the room. Surfaces have their own picker. */
+  const stored = useMemo(() => {
+    const placedIds = new Set(placed.map((p) => p.item_id))
+    return owned.filter((item) => !isSurface(item) && !placedIds.has(item.id))
+  }, [placed, owned])
+
+  /** Owned floors, walls and washes, by category, with the one on show. */
+  const surfaceGroups = useMemo(
+    () =>
+      SURFACE_CATEGORIES.map((category) => ({
+        category,
+        items: owned.filter((item) => item.category === category),
+        activeId: activeSurface(placed, category)?.item_id ?? null,
+      })).filter((group) => group.items.length > 0),
+    [owned, placed],
+  )
+
+  /**
+   * Swaps the room's floor, wall or wash. The room shows one of each, so the
+   * old one goes back to storage rather than lingering underneath. The new one
+   * goes in first so the room never flashes bare.
+   */
+  const applySurface = useCallback(
+    (item: CatalogItem) => {
+      const category = item.category as SurfaceCategory
+      const others = placed.filter((p) => p.item.category === category && p.item_id !== item.id)
+      const clearOthers = () => others.forEach((p) => storeItem.mutate(p.id))
+      setError(null)
+      if (placed.some((p) => p.item_id === item.id)) {
+        clearOthers()
+      } else {
+        placeItem.mutate(
+          { itemId: item.id, gx: 0, gy: 0 },
+          {
+            onSuccess: clearOthers,
+            onError: () => setError('That did not stick. Try again in a moment.'),
+          },
+        )
+      }
+    },
+    [placed, placeItem, storeItem],
+  )
 
   /** Existing footprints, for the collision check. */
   const placements: Placement[] = useMemo(
@@ -100,8 +147,7 @@ export function RoomEditor() {
         rotation: rotation ?? selected.rotation,
       }
       // Room-wide surfaces have no position to speak of; skip the check.
-      const isSurface = ['floor', 'wall', 'wallcolor'].includes(selected.item.category)
-      if (!isSurface && !canPlace(candidate, placements, { ignoreId: selected.id })) {
+      if (!isSurface(selected.item) && !canPlace(candidate, placements, { ignoreId: selected.id })) {
         setError('Something is already there.')
         return
       }
@@ -241,6 +287,56 @@ export function RoomEditor() {
         </div>
       )}
 
+      {surfaceGroups.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg">Floors &amp; walls</h2>
+          {surfaceGroups.map((group) => (
+            <div key={group.category} className="mt-3">
+              <h3 className="text-sm font-bold text-ink-soft">{SURFACE_LABELS[group.category]}</h3>
+              <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                {group.items.map((item) => {
+                  const active = item.id === group.activeId
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        aria-pressed={active}
+                        className={cn(
+                          'w-full rounded-xl border bg-paper p-2 text-left',
+                          'transition-colors duration-cozy ease-cozy hover:border-wood',
+                          active ? 'border-wood ring-2 ring-wood/40' : 'border-ink-line/70',
+                        )}
+                        onClick={() => {
+                          if (active && group.category === 'wallcolor') {
+                            // A wash is optional: tapping the one on show takes it off.
+                            const row = placed.find((p) => p.item_id === item.id)
+                            if (row) storeItem.mutate(row.id)
+                          } else if (!active) {
+                            applySurface(item)
+                          }
+                        }}
+                      >
+                        <svg viewBox="-60 -80 120 110" className="h-16 w-full" aria-hidden>
+                          <Furniture
+                            artKey={item.art_key}
+                            footprintW={item.footprint_w}
+                            footprintH={item.footprint_h}
+                          />
+                        </svg>
+                        <span className="mt-1 block truncate text-xs font-bold">{item.name}</span>
+                        <span className="block text-[11px] text-ink-faint">
+                          {active ? (group.category === 'wallcolor' ? 'On — tap to remove' : 'In use') : 'Use this'}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
       <section className="mt-8">
         <h2 className="text-lg">Storage</h2>
         {stored.length === 0 ? (
@@ -287,6 +383,12 @@ export function RoomEditor() {
       </section>
     </div>
   )
+}
+
+const SURFACE_LABELS: Record<SurfaceCategory, string> = {
+  floor: 'Floor',
+  wall: 'Walls',
+  wallcolor: 'Wall colour',
 }
 
 interface Hung {
