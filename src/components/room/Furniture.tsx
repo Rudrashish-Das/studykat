@@ -787,12 +787,22 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
   },
 
   candle: ({ mat }) => (
-    <g transform={`translate(0, ${HY})`}>
-      <Box z={5} mat={mat} inset={0.7} />
-      <rect x="-4" y="-22" width="8" height="18" rx="2" fill={mat.top} />
-      <circle cx="0" cy="-26" r="4" fill="#f5cf7a" stroke="none" opacity="0.9" />
-      <circle cx="0" cy="-26" r="9" fill="#f5cf7a" stroke="none" opacity="0.2" />
-    </g>
+    <>
+      {/* The dish, centred on the tile like everything else. */}
+      <Box z={4} mat={mat} inset={0.5} />
+      {/* Everything below stands on the middle of the dish's top face. */}
+      <g transform={`translate(0, ${HY - 4})`}>
+        <circle cx="0" cy="-36" r="14" fill="#f5cf7a" stroke="none" opacity="0.18" />
+        {/* A round pillar: straight sides, a curved front edge and an oval top. */}
+        <path d="M-7 -1 L-7 -24 A7 3.5 0 0 1 7 -24 L7 -1 A7 3.5 0 0 1 -7 -1 Z" fill={mat.left} />
+        <ellipse cx="0" cy="-24" rx="7" ry="3.5" fill={mat.top} />
+        <path d="M2 -21.3 L2 -17 A1.5 1.5 0 0 0 5 -17 L5 -21.8" fill={mat.top} strokeWidth="1.2" />
+        <line x1="0" y1="-25" x2="0" y2="-29" strokeWidth="1.5" />
+        {/* A teardrop flame with a pale core. */}
+        <path d="M0 -42 C 3 -38 5 -34 0 -29.5 C -5 -34 -3 -38 0 -42 Z" fill="#f5cf7a" stroke="#d9a04a" strokeWidth="1.2" />
+        <ellipse cx="0" cy="-33" rx="1.6" ry="2.6" fill="#fff4d0" stroke="none" />
+      </g>
+    </>
   ),
 
   'lamp-table': ({ mat }) => (
