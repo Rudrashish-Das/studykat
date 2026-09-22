@@ -1,5 +1,5 @@
 -- 0005_catalog_seed.sql
--- The shop. 54 items.
+-- The shop. 57 items.
 --
 -- Price curve: a 25-minute session pays about 26 coins, so the cheapest items
 -- (40-90) are two sessions away and land in week one. The mid tier (150-800)
@@ -68,6 +68,8 @@ values
   -- ------------------------------------------------------------------ toys
   ('yarn-ball',        'Ball of yarn',      'Destined to end up under the sofa.',          'toy',       40,   null,                                      1, 1, 2, 'toy-ball/rose',        10),
   ('feather-wand',     'Feather wand',      'Batteries not required.',                     'toy',       75,   null,                                      1, 1, 2, 'toy-wand/teal',        20),
+  ('plush-snake',      'Plush snake',       'Harmless. Suspiciously long.',                'toy',       120,  null,                                      1, 1, 2, 'toy-snake/sage',       25),
+  ('teddy-bear',       'Teddy bear',        'Has seen things. Says nothing.',              'toy',       420,  null,                                      1, 1, 2, 'teddy/oak',            45),
   ('scratching-post',  'Scratching post',   'Bought to save the sofa. Worked partly.',     'toy',       230,  null,                                      1, 1, 2, 'tallbox/pine',         30),
   ('cat-bed',          'Cat bed',           'Will be ignored in favour of a box.',         'toy',       310,  null,                                      1, 1, 2, 'catbed/rose',          40),
   ('cat-tree',         'Cat tree',          'A whole apartment, vertically.',              'toy',       880,  null,                                      1, 1, 2, 'cattree/pine',         50),

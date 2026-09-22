@@ -16,6 +16,7 @@ import {
 } from '@/lib/iso/projection'
 import { Cat, type CatPose } from '@/components/cat/Cat'
 import type { CatAppearance } from '@/lib/cat/appearance'
+import type { ItemMotion } from '@/lib/cat/interactions'
 import { Furniture } from './Furniture'
 import { MATERIALS, OUTLINE, WALL_WASHES, materialFor, parseArtKey } from './materials'
 import type { CatalogItem, RoomLayoutRow } from '@/lib/supabase/types'
@@ -40,7 +41,7 @@ export interface RoomProps {
   /** Changes on every pat so the hearts replay. */
   catPats?: number
   /** The item the cat is playing with, and how it moves. */
-  activeItem?: { id: string; motion: 'roll' | 'sway' | 'shake' | 'rustle' | null } | null
+  activeItem?: { id: string; motion: ItemMotion } | null
   /** Makes the cat a button. Home only: the editor needs clicks to reach the items. */
   onCatClick?: () => void
   catName?: string
@@ -113,6 +114,29 @@ export function Room({
     [placed],
   )
 
+  /**
+   * A toy the cat is playing with up close. It comes over beside the toy, on
+   * the same depth line, so the two move as one scene: its moves go sideways
+   * straight at the toy, and its paws land on top of it rather than behind.
+   */
+  const playToy = useMemo(
+    () =>
+      activeItem && !catPerch && CLOSE_PLAY.has(activeItem.motion)
+        ? objects.find((p) => p.id === activeItem.id)
+        : undefined,
+    [activeItem, catPerch, objects],
+  )
+
+  /**
+   * Which side of the toy the cat plays from: +1 when it is on the left, so the
+   * toy is knocked right, -1 on the right. Whichever side it walked up on.
+   */
+  const playAway = useMemo(() => {
+    if (!playToy) return null
+    const dx = toScreen(playToy.grid_x, playToy.grid_y).x - toScreen(catTile.gx, catTile.gy).x
+    return dx > 0 ? 1 : dx < 0 ? -1 : catFacing === 'right' ? 1 : -1
+  }, [playToy, catFacing, catTile.gx, catTile.gy])
+
   /** The cat is a drawable like any other, which is what makes it sort right. */
   const drawables = useMemo(() => {
     const items: (Drawable & { kind: 'item' | 'cat'; placed?: PlacedItem })[] = objects.map(
@@ -128,8 +152,11 @@ export function Room({
         placed: p,
       }),
     )
-    // A perched cat sorts just after what it is sitting on.
-    const seat = catPerch ? items.find((d) => d.id === catPerch.itemId) : undefined
+    // A perched cat sorts just after what it is sitting on, and a playing one
+    // just after its toy.
+    const seat = catPerch
+      ? items.find((d) => d.id === catPerch.itemId)
+      : playToy && items.find((d) => d.id === playToy.id)
     items.push({
       id: '__cat__',
       kind: 'cat',
@@ -139,7 +166,7 @@ export function Room({
       zIndex: seat ? seat.zIndex + 0.5 : 50,
     })
     return depthSort(items)
-  }, [objects, catTile.gx, catTile.gy, catPerch])
+  }, [objects, catTile.gx, catTile.gy, catPerch, playToy])
 
   // Paint order becomes z-index, so the DOM order can stay put: reordering the
   // nodes on every step would cancel the cat's walking transition.
@@ -152,13 +179,19 @@ export function Room({
   /** Where the cat's feet go: its tile, or the middle of whatever it is on. */
   const catSpot = useMemo(() => {
     const seat = catPerch ? objects.find((p) => p.id === catPerch.itemId) : undefined
+    if (playToy && playAway !== null) {
+      const at = toScreen(playToy.grid_x, playToy.grid_y)
+      return { x: at.x - playAway * CLOSE_PLAY_GAP, y: at.y, lift: 0 }
+    }
     if (!seat || !catPerch) return { ...toScreen(catTile.gx, catTile.gy), lift: 0 }
     const size = rotatedFootprint(seat.item.footprint_w, seat.item.footprint_h, seat.rotation)
     return {
       ...toScreen(seat.grid_x + size.w / 2 - 0.5, seat.grid_y + size.h / 2 - 0.5),
       lift: catPerch.lift,
     }
-  }, [catPerch, catTile.gx, catTile.gy, objects])
+  }, [catPerch, catTile.gx, catTile.gy, objects, playToy, playAway])
+
+  const facing = playAway === null ? catFacing : playAway > 0 ? 'right' : 'left'
 
   const pointerToTile = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -272,7 +305,14 @@ export function Room({
                       interactive || visitable ? 'cursor-pointer' : 'pointer-events-none',
                       visitable && 'sc-room-thing',
                     )}
-                    style={{ left: screen.x, top: screen.y, width: 0, height: 0, zIndex: stacking.get(p.id) }}
+                    style={{
+                      left: screen.x,
+                      top: screen.y,
+                      width: 0,
+                      height: 0,
+                      zIndex: stacking.get(p.id),
+                      ...(motion && playAway !== null && { '--sc-away': playAway }),
+                    }}
                     onPointerDown={(event) => {
                       if (!interactive) return
                       event.stopPropagation()
@@ -345,10 +385,10 @@ export function Room({
                       onClick={onCatClick}
                       aria-label={`Pet ${catName}`}
                     >
-                      <CatFigure appearance={cat} pose={catPose} facing={catFacing} animate={!reducedMotion} />
+                      <CatFigure appearance={cat} pose={catPose} facing={facing} animate={!reducedMotion} />
                     </button>
                   ) : (
-                    <CatFigure appearance={cat} pose={catPose} facing={catFacing} animate={!reducedMotion} />
+                    <CatFigure appearance={cat} pose={catPose} facing={facing} animate={!reducedMotion} />
                   )}
                   <CatEffect effect={catEffect} pats={catPats} />
                 </div>
@@ -485,6 +525,11 @@ function CatEffect({ effect, pats }: { effect: 'hearts' | 'zzz' | null; pats: nu
     </svg>
   )
 }
+
+/** Toys the cat plays with up close, its pose in step with the toy's motion. */
+const CLOSE_PLAY: ReadonlySet<ItemMotion> = new Set(['slither', 'tackle'])
+/** How far to the side of the toy the cat's feet go, in room pixels. */
+const CLOSE_PLAY_GAP = 32
 
 /** The cat's drawn width in room pixels; its SVG is 120 x 124. */
 const CAT_WIDTH = 68

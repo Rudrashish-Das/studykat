@@ -39,6 +39,17 @@ describe('interactionFor', () => {
     expect(interactionFor(placed('s', 'tallbox/pine', [0, 0]).item).action).toBe('scratch')
   })
 
+  it('gives the snake and the teddy moves of their own', () => {
+    const snake = interactionFor(placed('n', 'toy-snake/sage', [0, 0]).item)
+    const teddy = interactionFor(placed('t', 'teddy/oak', [0, 0]).item)
+    expect(snake.action).toBe('play')
+    expect(snake.motion).toBe('slither')
+    expect(snake.pose).toBe('pouncing')
+    expect(teddy.action).toBe('play')
+    expect(teddy.motion).toBe('tackle')
+    expect(teddy.pose).toBe('wrestling')
+  })
+
   it('naps on soft furniture, up off the floor', () => {
     const bed = interactionFor(placed('b', 'bed/cream', [0, 0]).item)
     expect(bed.pose).toBe('sleeping')

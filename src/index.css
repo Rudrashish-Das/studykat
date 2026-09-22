@@ -271,6 +271,170 @@
 }
 .sc-item-rustle { animation: sc-rustle 1.6s ease-in-out infinite; }
 
+/* ------------------------------------------------ choreographed toy play --
+   The snake and the teddy are not animations running beside the cat; they are
+   one scene. The cat closes in (Room), takes a pose for that toy, and cat and
+   toy run keyframes of the same length that start on the same render, so
+   every beat lines up: the toy squashes the moment the paws land.
+
+   Room sets --sc-away on the toy: +1 when the cat is on its left, -1 on its
+   right, so the toy is always knocked away from the cat and turns back to it.
+   The cat's own moves are drawn heading left (Room mirrors it to face right),
+   so negative x is always "toward the toy". */
+
+/* Snake, 1.6s: crouch and wiggle, spring, pin — the snake is squashed flat,
+   thrashes, whips its head round at the cat and darts off, and the cat backs
+   off to go again. */
+.sc-cat-pounce { animation: sc-cat-pounce 1.6s ease-in-out infinite; }
+@keyframes sc-cat-pounce {
+  0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1, 1); }
+  8%       { transform: translate(0, 3px) rotate(-3deg) scale(1.04, 0.93); }
+  16%      { transform: translate(0, 3px) rotate(3deg) scale(1.04, 0.93); }
+  24%      { transform: translate(0, 3px) rotate(-3deg) scale(1.04, 0.93); }
+  32%      { transform: translate(2px, 5px) rotate(0deg) scale(1.07, 0.88); }
+  42%      { transform: translate(-16px, -16px) rotate(-9deg) scale(0.95, 1.07); }
+  52%      { transform: translate(-26px, 2px) rotate(3deg) scale(1.07, 0.9); }
+  62%      { transform: translate(-24px, 1px) rotate(-2deg) scale(1.05, 0.92); }
+  74%      { transform: translate(-25px, 2px) rotate(2deg) scale(1.06, 0.91); }
+  88%      { transform: translate(-8px, 0) rotate(0deg) scale(1, 1); }
+}
+
+/* Both front paws: tucked for the crouch, out in flight, slammed down to pin. */
+.sc-cat-pin { animation: sc-cat-pin 1.6s ease-in-out infinite; }
+@keyframes sc-cat-pin {
+  0%, 32%, 100% { transform: translate(0, 0); }
+  42%           { transform: translate(-7px, -12px); }
+  52%, 74%      { transform: translate(-9px, 1px); }
+  62%           { transform: translate(-8px, -1px); }
+  88%           { transform: translate(0, 0); }
+}
+
+.sc-item-slither,
+.sc-snake-seg,
+.sc-snake-head,
+.sc-snake-tongue { transform-box: fill-box; }
+.sc-item-slither,
+.sc-snake-seg,
+.sc-snake-head   { transform-origin: center bottom; }
+.sc-snake-tongue { transform-origin: left center; transform: scaleX(0); }
+
+.sc-item-slither { animation: sc-snake-pinned 1.6s ease-in-out infinite; }
+@keyframes sc-snake-pinned {
+  /* Creeps toward the cat while it wiggles — asking for it. */
+  0%, 100% { transform: translateX(0) scale(1, 1); }
+  30%      { transform: translateX(calc(var(--sc-away, 1) * -2px)) scale(1, 1); }
+  /* The paws land: squashed flat, held, struggling. */
+  52%      { transform: translateX(calc(var(--sc-away, 1) * -1px)) scale(1.08, 0.78); }
+  62%      { transform: translateX(calc(var(--sc-away, 1) * -1px)) scale(1.05, 0.86); }
+  72%      { transform: translateX(0) scale(1.07, 0.8); }
+  /* Squirms free and darts off as the cat backs away. */
+  86%      { transform: translateX(calc(var(--sc-away, 1) * 6px)) scale(1, 1); }
+}
+
+/* The wave runs down the body twice a beat; each segment is a step behind. */
+.sc-item-slither .sc-snake-seg { animation: sc-snake-wave 0.8s ease-in-out infinite; }
+@keyframes sc-snake-wave {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50%      { transform: translateY(-3.5px) scale(0.94, 1.08); }
+}
+
+.sc-item-slither .sc-snake-head { animation: sc-snake-strike 1.6s ease-in-out infinite; }
+@keyframes sc-snake-strike {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  20%      { transform: translateY(-2px) rotate(calc(var(--sc-away, 1) * -6deg)); }
+  40%      { transform: translateY(-1px) rotate(calc(var(--sc-away, 1) * 4deg)); }
+  52%      { transform: translateY(2px) rotate(0deg); }
+  /* Rears up and snaps round at the cat that is holding it down. */
+  64%      { transform: translateY(-8px) rotate(calc(var(--sc-away, 1) * -18deg)); }
+  72%      { transform: translateY(-5px) rotate(calc(var(--sc-away, 1) * -24deg)); }
+  86%      { transform: translateY(-1px) rotate(calc(var(--sc-away, 1) * 6deg)); }
+}
+
+/* A flick while it is being stalked, and a hiss as it rears. */
+.sc-item-slither .sc-snake-tongue { animation: sc-snake-flick 1.6s linear infinite; }
+@keyframes sc-snake-flick {
+  0%, 14%, 24%, 60%, 76%, 100% { transform: scaleX(0); }
+  18%, 22%, 64%, 72%           { transform: scaleX(1); }
+  20%, 68%                     { transform: scaleX(0.6); }
+}
+
+/* Teddy, 1.1s: the cat lunges and wraps its paws round the bear, which tips
+   away from the hit; hauls it back in; then three quick bunny kicks, each one
+   jolting the bear, whose head flops a beat behind its body. */
+.sc-cat-wrestle { animation: sc-cat-wrestle 1.1s ease-in-out infinite; }
+@keyframes sc-cat-wrestle {
+  0%, 100% { transform: translate(-12px, 0) rotate(0deg) scale(1, 1); }
+  20%      { transform: translate(-27px, 2px) rotate(-10deg) scale(1.03, 0.96); }
+  40%      { transform: translate(-17px, 3px) rotate(5deg) scale(1.03, 0.95); }
+  55%      { transform: translate(-22px, 2px) rotate(-3deg) scale(1.02, 0.97); }
+  65%      { transform: translate(-19px, 3px) rotate(-6deg) scale(1.03, 0.95); }
+  75%      { transform: translate(-22px, 2px) rotate(-3deg) scale(1.02, 0.97); }
+}
+
+.sc-cat-grapple-left  { animation: sc-cat-grapple 1.1s ease-in-out infinite; }
+.sc-cat-grapple-right { animation: sc-cat-grapple-far 1.1s ease-in-out infinite; }
+@keyframes sc-cat-grapple {
+  0%, 100% { transform: translate(0, 0); }
+  20%      { transform: translate(-9px, 5px); }
+  40%      { transform: translate(-4px, 9px); }
+  55%, 75% { transform: translate(-6px, 7px); }
+  65%      { transform: translate(-5px, 9px); }
+}
+/* The far paw reaches round the other side of the bear. */
+@keyframes sc-cat-grapple-far {
+  0%, 100% { transform: translate(0, 0); }
+  20%      { transform: translate(-14px, 3px); }
+  40%      { transform: translate(-10px, 8px); }
+  55%, 75% { transform: translate(-12px, 6px); }
+  65%      { transform: translate(-11px, 8px); }
+}
+
+.sc-item-tackle,
+.sc-teddy-head,
+.sc-teddy-arm { transform-box: fill-box; }
+.sc-item-tackle      { transform-origin: center bottom; }
+.sc-teddy-head       { transform-origin: center bottom; }
+.sc-teddy-arm-left   { transform-origin: right top; }
+.sc-teddy-arm-right  { transform-origin: left top; }
+
+.sc-item-tackle { animation: sc-teddy-tackled 1.1s ease-in-out infinite; }
+@keyframes sc-teddy-tackled {
+  0%, 100% { transform: translateX(0) rotate(0deg) scale(1, 1); }
+  20%      { transform: translateX(calc(var(--sc-away, 1) * 2px)) rotate(calc(var(--sc-away, 1) * 16deg)) scale(1.05, 0.9); }
+  40%      { transform: translateX(calc(var(--sc-away, 1) * -1px)) rotate(calc(var(--sc-away, 1) * -10deg)) scale(0.96, 1.05); }
+  55%      { transform: translateX(calc(var(--sc-away, 1) * 1.5px)) rotate(calc(var(--sc-away, 1) * -3deg)) scale(1.03, 0.95); }
+  65%      { transform: translateX(0) rotate(calc(var(--sc-away, 1) * -8deg)) scale(1, 1); }
+  75%      { transform: translateX(calc(var(--sc-away, 1) * 1.5px)) rotate(calc(var(--sc-away, 1) * -3deg)) scale(1.03, 0.95); }
+}
+
+.sc-item-tackle .sc-teddy-head { animation: sc-teddy-flop 1.1s ease-in-out infinite; }
+@keyframes sc-teddy-flop {
+  0%, 100% { transform: rotate(0deg); }
+  26%      { transform: rotate(calc(var(--sc-away, 1) * 18deg)); }
+  46%      { transform: rotate(calc(var(--sc-away, 1) * -14deg)); }
+  58%      { transform: rotate(calc(var(--sc-away, 1) * 5deg)); }
+  68%      { transform: rotate(calc(var(--sc-away, 1) * -7deg)); }
+  78%      { transform: rotate(calc(var(--sc-away, 1) * 5deg)); }
+}
+
+/* Flung up by the hit, squeezed in by the hug, jolted by each kick. */
+.sc-item-tackle .sc-teddy-arm-left  { animation: sc-teddy-arm-left 1.1s ease-in-out infinite; }
+.sc-item-tackle .sc-teddy-arm-right { animation: sc-teddy-arm-right 1.1s ease-in-out infinite; }
+@keyframes sc-teddy-arm-left {
+  0%, 100% { transform: rotate(0deg); }
+  20%      { transform: rotate(32deg); }
+  40%      { transform: rotate(-10deg); }
+  55%, 75% { transform: rotate(10deg); }
+  65%      { transform: rotate(-4deg); }
+}
+@keyframes sc-teddy-arm-right {
+  0%, 100% { transform: rotate(0deg); }
+  20%      { transform: rotate(-32deg); }
+  40%      { transform: rotate(10deg); }
+  55%, 75% { transform: rotate(-10deg); }
+  65%      { transform: rotate(4deg); }
+}
+
 @keyframes sc-float-up {
   0%   { transform: translateY(0) scale(0.6); opacity: 0; }
   20%  { opacity: 1; }

@@ -27,6 +27,19 @@ export type CatPose =
   | 'scratching'
   /** Head down, eyes wide: sniffing or staring at something. */
   | 'curious'
+  /** Crouch, bum wiggle, spring, pin with both paws — on a beat the toy shares. */
+  | 'pouncing'
+  /** Both paws wrapped round something, rocking into it and bunny-kicking. */
+  | 'wrestling'
+
+/**
+ * Whole-body moves for the poses that go somewhere. They share a beat with the
+ * toy's own animation in index.css, so the toy reacts when the paws land.
+ */
+const BODY_MOTION: Partial<Record<CatPose, string>> = {
+  pouncing: 'sc-cat-pounce',
+  wrestling: 'sc-cat-wrestle',
+}
 
 const OUTLINE = '#4a3b34'
 
@@ -95,46 +108,51 @@ export const Cat = memo(function Cat({
       <ellipse cx="60" cy="112" rx="34" ry="7" fill={OUTLINE} opacity="0.15" />
 
       <g
-        stroke={OUTLINE}
-        strokeWidth="2.2"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        className={animate ? 'sc-cat-breathe' : undefined}
-        style={{ transformOrigin: '60px 104px' }}
+        className={animate ? BODY_MOTION[pose] : undefined}
+        style={{ transformOrigin: '60px 108px' }}
       >
-        <Tail appearance={appearance} pose={pose} animate={animate} />
+        <g
+          stroke={OUTLINE}
+          strokeWidth="2.2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          className={animate ? 'sc-cat-breathe' : undefined}
+          style={{ transformOrigin: '60px 104px' }}
+        >
+          <Tail appearance={appearance} pose={pose} animate={animate} />
 
-        {/* Body */}
-        <path d={BODY_PATH} fill={coat.body} />
-        <g clipPath={`url(#${bodyClip})`} stroke="none">
-          <BodyPattern appearance={appearance} />
+          {/* Body */}
+          <path d={BODY_PATH} fill={coat.body} />
+          <g clipPath={`url(#${bodyClip})`} stroke="none">
+            <BodyPattern appearance={appearance} />
+          </g>
+          <path d={BODY_PATH} fill="none" />
+
+          {/* Front paws, and the socks that sit on them */}
+          <Paws appearance={appearance} pose={pose} animate={animate} />
+
+          {/* Head */}
+          <Ears appearance={appearance} dip={headDip} animate={animate} />
+          <ellipse cx="60" cy={48 + headDip} rx="25" ry="22" fill={coat.body} />
+          <g clipPath={`url(#${headClip})`} stroke="none">
+            <HeadPattern appearance={appearance} dip={headDip} />
+          </g>
+          <ellipse cx="60" cy={48 + headDip} rx="25" ry="22" fill="none" />
+
+          <Face appearance={appearance} pose={pose} dip={headDip} animate={animate} nose={nose} />
+
+          {appearance.sparkle && (
+            <ellipse
+              cx="60"
+              cy="66"
+              rx="52"
+              ry="54"
+              fill={`url(#${sparkleId})`}
+              stroke="none"
+              className={animate ? 'sc-cat-sparkle' : undefined}
+            />
+          )}
         </g>
-        <path d={BODY_PATH} fill="none" />
-
-        {/* Front paws, and the socks that sit on them */}
-        <Paws appearance={appearance} pose={pose} animate={animate} />
-
-        {/* Head */}
-        <Ears appearance={appearance} dip={headDip} animate={animate} />
-        <ellipse cx="60" cy={48 + headDip} rx="25" ry="22" fill={coat.body} />
-        <g clipPath={`url(#${headClip})`} stroke="none">
-          <HeadPattern appearance={appearance} dip={headDip} />
-        </g>
-        <ellipse cx="60" cy={48 + headDip} rx="25" ry="22" fill="none" />
-
-        <Face appearance={appearance} pose={pose} dip={headDip} animate={animate} nose={nose} />
-
-        {appearance.sparkle && (
-          <ellipse
-            cx="60"
-            cy="66"
-            rx="52"
-            ry="54"
-            fill={`url(#${sparkleId})`}
-            stroke="none"
-            className={animate ? 'sc-cat-sparkle' : undefined}
-          />
-        )}
       </g>
       {/* Keeps the accent colour referenced even for solid cats, so the value
           is never dropped by a future refactor that only reads what it draws. */}
@@ -166,7 +184,11 @@ function Tail({
       ? 'M86 98 C 96 98 100 92 98 86'
       : tail === 'curl'
         ? 'M86 98 C 102 100 108 88 100 80 C 95 75 88 78 90 84'
-        : pose === 'happy' || pose === 'playing' || pose === 'scratching'
+        : pose === 'happy' ||
+            pose === 'playing' ||
+            pose === 'scratching' ||
+            pose === 'pouncing' ||
+            pose === 'wrestling'
           ? 'M86 96 C 104 94 110 76 104 60'
           : 'M86 98 C 104 98 110 84 104 70'
 
@@ -197,11 +219,16 @@ function Paws({
   const front = Math.min(socks, 2)
   const sock = '#f3e8d8'
   // Playing lifts the left paw to bat with; scratching raises both, and they
-  // take turns.
-  const leftUp = pose === 'playing' || pose === 'scratching'
-  const rightUp = pose === 'scratching'
+  // take turns. Wrestling holds both up round the toy; pouncing keeps them down
+  // but shoots them forward to pin.
+  const leftUp = pose === 'playing' || pose === 'scratching' || pose === 'wrestling'
+  const rightUp = pose === 'scratching' || pose === 'wrestling'
   const raised = (up: boolean, cls: string) =>
     up ? { cy: 80, className: animate ? cls : undefined } : { cy: 104 }
+  const left =
+    pose === 'playing' ? 'sc-cat-bat' : pose === 'wrestling' ? 'sc-cat-grapple-left' : 'sc-cat-knead-left'
+  const right = pose === 'wrestling' ? 'sc-cat-grapple-right' : 'sc-cat-knead-right'
+  const pin = pose === 'pouncing' && animate ? 'sc-cat-pin' : undefined
 
   return (
     <g>
@@ -210,7 +237,8 @@ function Paws({
         rx="9"
         ry="6"
         fill={front >= 1 ? sock : coat.body}
-        {...raised(leftUp, pose === 'playing' ? 'sc-cat-bat' : 'sc-cat-knead-left')}
+        {...raised(leftUp, left)}
+        {...(pin && { className: pin })}
         style={{ transformOrigin: '48px 92px' }}
       />
       <ellipse
@@ -218,7 +246,8 @@ function Paws({
         rx="9"
         ry="6"
         fill={front >= 2 ? sock : coat.body}
-        {...raised(rightUp, 'sc-cat-knead-right')}
+        {...raised(rightUp, right)}
+        {...(pin && { className: pin })}
         style={{ transformOrigin: '72px 92px' }}
       />
       {socks >= 3 && <ellipse cx="34" cy="99" rx="5" ry="4" fill={sock} />}
@@ -368,7 +397,7 @@ function Face({
   const closed = pose === 'happy'
   const narrow = pose === 'studying' || pose === 'scratching'
   // Hunting eyes: pupils blown wide.
-  const wide = pose === 'playing' || pose === 'curious'
+  const wide = pose === 'playing' || pose === 'curious' || pose === 'pouncing' || pose === 'wrestling'
 
   return (
     <g>

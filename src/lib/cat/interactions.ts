@@ -22,7 +22,7 @@ import {
 export type CatAction = 'play' | 'scratch' | 'nap' | 'perch' | 'sniff' | 'watch' | 'roll'
 
 /** How the item itself answers back while the cat is at it. */
-export type ItemMotion = 'roll' | 'sway' | 'shake' | 'rustle' | null
+export type ItemMotion = 'roll' | 'sway' | 'shake' | 'rustle' | 'slither' | 'tackle' | null
 
 export interface Interaction {
   action: CatAction
@@ -103,6 +103,26 @@ const BY_SHAPE: Record<string, Interaction> = {
     weight: 5,
     duration: PLAY,
     describe: (t) => `is pouncing on the ${t}.`,
+  },
+  // These two are choreographed: the cat closes in and its pose shares a beat
+  // with the toy's motion, so the toy reacts when the paws land.
+  'toy-snake': {
+    action: 'play',
+    pose: 'pouncing',
+    lift: null,
+    motion: 'slither',
+    weight: 5,
+    duration: PLAY,
+    describe: (t) => `is pouncing on the ${t}. It keeps getting away.`,
+  },
+  teddy: {
+    action: 'play',
+    pose: 'wrestling',
+    lift: null,
+    motion: 'tackle',
+    weight: 4,
+    duration: PLAY,
+    describe: (t) => `has tackled the ${t} and is bunny-kicking it.`,
   },
   tallbox: {
     action: 'scratch',

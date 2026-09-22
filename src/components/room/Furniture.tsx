@@ -909,6 +909,98 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
     </g>
   ),
 
+  /*
+   * A striped plush snake lying in an S across the tile. Each segment is its
+   * own group so that, while the cat has hold of it, a wave can run down the
+   * body one segment behind the next; the head moves on the cat's beat instead
+   * (see the choreographed toy play in index.css).
+   */
+  'toy-snake': ({ mat }) => {
+    const n = 14
+    const segs = Array.from({ length: n }, (_, i) => {
+      const t = i / (n - 1)
+      return {
+        i,
+        x: -25 + 39 * t,
+        y: HY + 1 + 6.5 * Math.sin(t * Math.PI * 2),
+        r: 2.2 + 2.8 * Math.sin(Math.min(1, t * 1.6) * (Math.PI / 2)),
+      }
+    })
+    // Two passes over the same segments, moving together: a slightly larger
+    // outline-coloured disc under each, then the fills on top, so the body
+    // reads as one soft tube with a single outline rather than a stack of rings.
+    const seg = (s: (typeof segs)[number], outline: boolean) => (
+      <g key={s.i} className="sc-snake-seg" style={{ animationDelay: `${-s.i * 0.08}s` }}>
+        <circle
+          cx={s.x}
+          cy={s.y - s.r}
+          r={outline ? s.r + 1.1 : s.r}
+          fill={outline ? OUTLINE : s.i % 4 === 2 ? mat.right : mat.left}
+          stroke="none"
+        />
+      </g>
+    )
+    return (
+      <>
+        {segs.map((s) => seg(s, true))}
+        {segs.map((s) => seg(s, false))}
+        <g className="sc-snake-head">
+          <path
+            className="sc-snake-tongue"
+            d="M24 11 L30 11 M30 11 L33 9 M30 11 L33 13"
+            stroke="#c9605a"
+            strokeWidth="1.4"
+            fill="none"
+          />
+          <ellipse cx="19" cy="10" rx="7.5" ry="6" fill={mat.left} />
+          <ellipse cx="21.5" cy="12" rx="3.5" ry="2" fill={mat.accent} strokeWidth="1" />
+          <circle cx="18" cy="7.5" r="1.4" fill={OUTLINE} stroke="none" />
+          <circle cx="22" cy="7.8" r="1.2" fill={OUTLINE} stroke="none" />
+        </g>
+      </>
+    )
+  },
+
+  /*
+   * A teddy bear sitting up, feet out. Head and arms are separate groups so a
+   * tackle can knock the head about and set the arms flailing on top of the
+   * whole bear rocking.
+   */
+  teddy: ({ mat }) => (
+    <g transform={`translate(0, ${HY + 5})`}>
+      <g className="sc-teddy-arm sc-teddy-arm-left">
+        <ellipse cx="-11" cy="-15" rx="4.2" ry="7" fill={mat.left} transform="rotate(28 -11 -15)" />
+      </g>
+      <g className="sc-teddy-arm sc-teddy-arm-right">
+        <ellipse cx="11" cy="-15" rx="4.2" ry="7" fill={mat.right} transform="rotate(-28 11 -15)" />
+      </g>
+      <ellipse cx="0" cy="-11" rx="10.5" ry="11.5" fill={mat.left} />
+      <ellipse cx="0" cy="-9" rx="6" ry="6.5" fill={mat.accent} strokeWidth="1.2" />
+      {[-7, 7].map((x) => (
+        <g key={x}>
+          <ellipse cx={x} cy="-1.5" rx="5.5" ry="4.5" fill={x < 0 ? mat.left : mat.right} />
+          <ellipse cx={x} cy="-1" rx="2.6" ry="2.2" fill={mat.accent} strokeWidth="1" />
+        </g>
+      ))}
+      <g className="sc-teddy-head">
+        {[-8, 8].map((x) => (
+          <g key={x}>
+            <circle cx={x} cy="-34" r="4.3" fill={mat.left} />
+            <circle cx={x} cy="-34" r="2" fill={mat.accent} stroke="none" />
+          </g>
+        ))}
+        <circle cx="0" cy="-28" r="10" fill={mat.left} />
+        <ellipse cx="0" cy="-24.5" rx="4.6" ry="3.4" fill={mat.accent} strokeWidth="1.2" />
+        <ellipse cx="0" cy="-25.8" rx="1.7" ry="1.1" fill={OUTLINE} stroke="none" />
+        <circle cx="-4" cy="-30" r="1.3" fill={OUTLINE} stroke="none" />
+        <circle cx="4" cy="-30" r="1.3" fill={OUTLINE} stroke="none" />
+      </g>
+      {/* A bow at the neck, so it reads as a teddy and not a small brown dog. */}
+      <path d="M0 -19 L-5.5 -22 L-5.5 -16 Z M0 -19 L5.5 -22 L5.5 -16 Z" fill={MATERIALS.rose!.left} strokeWidth="1.2" />
+      <circle cx="0" cy="-19" r="1.4" fill={MATERIALS.rose!.right} strokeWidth="1" />
+    </g>
+  ),
+
   catbed: ({ mat }) => (
     <>
       <Box z={8} mat={mat} inset={0.18} />
