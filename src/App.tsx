@@ -1,6 +1,6 @@
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { Tooltips } from '@/components/ui/Tooltips'
 import {
@@ -13,15 +13,22 @@ import { AuthProvider, useAuth } from '@/lib/auth'
 import { paths } from '@/lib/paths'
 import { Landing } from '@/screens/Landing'
 import { Auth } from '@/screens/Auth'
-import { Onboarding } from '@/screens/Onboarding'
-import { Home } from '@/screens/Home'
-import { Focus } from '@/screens/Focus'
-import { SessionComplete } from '@/screens/SessionComplete'
-import { Shop } from '@/screens/Shop'
-import { RoomEditor } from '@/screens/RoomEditor'
-import { Stats } from '@/screens/Stats'
-import { Settings } from '@/screens/Settings'
 import { NotFound } from '@/screens/NotFound'
+import { FullScreenSpinner } from '@/components/ui/Spinner'
+
+// The signed-in screens carry the room renderer, the cat and all the furniture
+// art, none of which the landing and sign-in pages need. Loading them on
+// demand keeps that out of a first visit's download.
+const Onboarding = lazy(() => import('@/screens/Onboarding').then((m) => ({ default: m.Onboarding })))
+const Home = lazy(() => import('@/screens/Home').then((m) => ({ default: m.Home })))
+const Focus = lazy(() => import('@/screens/Focus').then((m) => ({ default: m.Focus })))
+const SessionComplete = lazy(() =>
+  import('@/screens/SessionComplete').then((m) => ({ default: m.SessionComplete })),
+)
+const Shop = lazy(() => import('@/screens/Shop').then((m) => ({ default: m.Shop })))
+const RoomEditor = lazy(() => import('@/screens/RoomEditor').then((m) => ({ default: m.RoomEditor })))
+const Stats = lazy(() => import('@/screens/Stats').then((m) => ({ default: m.Stats })))
+const Settings = lazy(() => import('@/screens/Settings').then((m) => ({ default: m.Settings })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,60 +50,62 @@ export function App() {
           <SkipLink />
           <Tooltips />
           <RecoveryRedirect />
-          <Routes>
-            {/* Public. Signed-in users are bounced to their room. */}
-            <Route
-              path={paths.landing}
-              element={
-                <RedirectIfSignedIn>
-                  <Landing />
-                </RedirectIfSignedIn>
-              }
-            />
-            <Route
-              path={paths.login}
-              element={
-                <RedirectIfSignedIn>
-                  <Auth mode="login" />
-                </RedirectIfSignedIn>
-              }
-            />
-            <Route
-              path={paths.register}
-              element={
-                <RedirectIfSignedIn>
-                  <Auth mode="register" />
-                </RedirectIfSignedIn>
-              }
-            />
-            <Route path={paths.reset} element={<Auth mode="reset" />} />
-            {/* Reached from a reset email, where a recovery session is active. */}
-            <Route path={paths.newPassword} element={<Auth mode="new-password" />} />
+          <Suspense fallback={<FullScreenSpinner label="Loading" />}>
+            <Routes>
+              {/* Public. Signed-in users are bounced to their room. */}
+              <Route
+                path={paths.landing}
+                element={
+                  <RedirectIfSignedIn>
+                    <Landing />
+                  </RedirectIfSignedIn>
+                }
+              />
+              <Route
+                path={paths.login}
+                element={
+                  <RedirectIfSignedIn>
+                    <Auth mode="login" />
+                  </RedirectIfSignedIn>
+                }
+              />
+              <Route
+                path={paths.register}
+                element={
+                  <RedirectIfSignedIn>
+                    <Auth mode="register" />
+                  </RedirectIfSignedIn>
+                }
+              />
+              <Route path={paths.reset} element={<Auth mode="reset" />} />
+              {/* Reached from a reset email, where a recovery session is active. */}
+              <Route path={paths.newPassword} element={<Auth mode="new-password" />} />
 
-            {/* Signed in. */}
-            <Route element={<RequireAuth />}>
-              <Route element={<RedirectIfOnboarded />}>
-                <Route path={paths.onboarding} element={<Onboarding />} />
-              </Route>
+              {/* Signed in. */}
+              <Route element={<RequireAuth />}>
+                <Route element={<RedirectIfOnboarded />}>
+                  <Route path={paths.onboarding} element={<Onboarding />} />
+                </Route>
 
-              <Route element={<RequireOnboarded />}>
-                {/* Full-bleed: Focus mode and the payoff screen get no chrome. */}
-                <Route path={paths.focus} element={<Focus />} />
-                <Route path={paths.sessionComplete} element={<SessionComplete />} />
+                <Route element={<RequireOnboarded />}>
+                  {/* Full-bleed: Focus mode and the payoff screen get no chrome. */}
+                  <Route path={paths.focus} element={<Focus />} />
+                  <Route path={paths.sessionComplete} element={<SessionComplete />} />
 
-                <Route element={<AppShell />}>
-                  <Route path={paths.home} element={<Home />} />
-                  <Route path={paths.shop} element={<Shop />} />
-                  <Route path={paths.room} element={<RoomEditor />} />
-                  <Route path={paths.stats} element={<Stats />} />
-                  <Route path={paths.settings} element={<Settings />} />
+                  <Route element={<AppShell />}>
+                    <Route path={paths.home} element={<Home />} />
+                    <Route path={paths.shop} element={<Shop />} />
+                    <Route path={paths.room} element={<RoomEditor />} />
+                    <Route path={paths.stats} element={<Stats />} />
+                    <Route path={paths.settings} element={<Settings />} />
+                  </Route>
                 </Route>
               </Route>
-            </Route>
 
-            <Route path="/index.html" element={<Navigate to={paths.landing} replace />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="/index.html" element={<Navigate to={paths.landing} replace />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </AuthProvider>
       </HashRouter>
     </QueryClientProvider>

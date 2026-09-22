@@ -1,4 +1,12 @@
-import { useCallback, useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import {
   GRID_SIZE,
   ROOM_H,
@@ -107,7 +115,22 @@ export function Room({
   const [stageRef, stageWidth] = useElementWidth<HTMLDivElement>()
   const scale = stageWidth > 0 ? stageWidth / ROOM_W : 1
   const [hover, setHover] = useState<{ gx: number; gy: number } | null>(null)
-  const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const hoverRef = useRef<{ gx: number; gy: number } | null>(null)
+  // The tilt follows every pointer move, so it is written straight to the
+  // stage's style, once per frame, rather than kept in state: as state it
+  // re-rendered the whole room — floor, walls, furniture and cat — per move.
+  const tiltFrame = useRef(0)
+  const applyTilt = useCallback(
+    (x: number, y: number) => {
+      cancelAnimationFrame(tiltFrame.current)
+      tiltFrame.current = requestAnimationFrame(() => {
+        const stage = stageRef.current
+        if (stage) stage.style.transform = `rotateX(${x}deg) rotateY(${y}deg)`
+      })
+    },
+    [stageRef],
+  )
+  useEffect(() => () => cancelAnimationFrame(tiltFrame.current), [])
 
   // Room-wide surfaces are placements too, but they are not objects: the
   // renderer reads whichever the user owns and ignores its grid cell.
@@ -221,25 +244,31 @@ export function Room({
     (event: ReactPointerEvent<HTMLDivElement>) => {
       if (interactive) {
         const tile = pointerToTile(event)
-        setHover(tile)
-        onHoverTile?.(tile)
+        // Only a change of tile is news; most moves stay within one.
+        const last = hoverRef.current
+        if (last?.gx !== tile?.gx || last?.gy !== tile?.gy) {
+          hoverRef.current = tile
+          setHover(tile)
+          onHoverTile?.(tile)
+        }
       }
       if (!reducedMotion) {
         // §8: the room leans about two degrees toward the cursor.
         const rect = event.currentTarget.getBoundingClientRect()
         const px = (event.clientX - rect.left) / rect.width - 0.5
         const py = (event.clientY - rect.top) / rect.height - 0.5
-        setTilt({ x: -py * 2, y: px * 2 })
+        applyTilt(-py * 2, px * 2)
       }
     },
-    [interactive, onHoverTile, pointerToTile, reducedMotion],
+    [interactive, onHoverTile, pointerToTile, reducedMotion, applyTilt],
   )
 
   const handleLeave = useCallback(() => {
+    hoverRef.current = null
     setHover(null)
     onHoverTile?.(null)
-    setTilt({ x: 0, y: 0 })
-  }, [onHoverTile])
+    applyTilt(0, 0)
+  }, [onHoverTile, applyTilt])
 
   const floorMat = materialFor(surfaces.floor ? parseArtKey(surfaces.floor.art_key).material : 'pine')
   const wallMat = materialFor(surfaces.wall ? parseArtKey(surfaces.wall.art_key).material : 'plaster')
@@ -261,7 +290,6 @@ export function Room({
         className="relative w-full transition-transform duration-500 ease-cozy"
         style={{
           aspectRatio: `${ROOM_W} / ${ROOM_H}`,
-          transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
           transformStyle: 'preserve-3d',
         }}
         onPointerDown={(event) => {
@@ -570,7 +598,8 @@ function positionOf(gx: number, gy: number) {
   return { left: x, top: y }
 }
 
-function Floor({ mat }: { mat: ReturnType<typeof materialFor> }) {
+// A hundred tiles that only change with the floor material, so memoised.
+const Floor = memo(function Floor({ mat }: { mat: ReturnType<typeof materialFor> }) {
   const tiles: React.ReactNode[] = []
   for (let gx = 0; gx < GRID_SIZE; gx += 1) {
     for (let gy = 0; gy < GRID_SIZE; gy += 1) {
@@ -607,11 +636,11 @@ function Floor({ mat }: { mat: ReturnType<typeof materialFor> }) {
       />
     </g>
   )
-}
+})
 
 const WALL_HEIGHT = 96
 
-function Walls({
+const Walls = memo(function Walls({
   mat,
   wash,
 }: {
@@ -663,5 +692,4 @@ function Walls({
       />
     </g>
   )
-}
-
+})

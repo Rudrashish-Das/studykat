@@ -649,7 +649,9 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
         {/* An open front: a recess, real shelves, and books standing on them.
             Three lines ruled across the side read as scratches, not shelves. */}
         {facePanel(f, 0.1, 5, 0.9, Z - 5, mat.right, 2)}
-        {shelves.map((v) => facePanel(f, 0.1, v, 0.9, v + 3.5, mat.left, 1, 1))}
+        {shelves.map((v) => (
+          <g key={v}>{facePanel(f, 0.1, v, 0.9, v + 3.5, mat.left, 1, 1)}</g>
+        ))}
         {spines.map((b, i) => (
           <g key={b.u}>
             {facePanel(f, b.u, shelves[i % 3]! + 3.5, b.u + b.w, shelves[i % 3]! + 3.5 + b.h, b.c, 1, 1)}
