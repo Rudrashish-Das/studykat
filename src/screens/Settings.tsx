@@ -175,9 +175,6 @@ export function Settings() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-bold">Sound</p>
-            <p className="text-xs text-ink-faint">
-              Kept in this browser only — it is a preference, not something you earned.
-            </p>
           </div>
           <button
             type="button"
