@@ -135,7 +135,7 @@ to tolerate anything after the base path.
 
 ### 2.5 Email
 
-**Authentication → Providers → Email**: enable it, and leave **Confirm email**
+**Authentication → Sign In / Providers → Email**: enable it, and leave **Confirm email**
 on. The built-in mailer is rate-limited on the free plan — that is fine for
 personal use; the app surfaces a "check your inbox" state rather than assuming
 instant delivery.
@@ -174,7 +174,11 @@ step people most often get wrong.
 
 ### 3.2 Supabase
 
-**Authentication → Providers → Google**: enable, paste the Client ID and Client
+> Not to be confused with **Authentication → OAuth Server**, which is the
+> opposite feature: it makes *your* project an identity provider so other apps
+> can offer "Sign in with StudyKat". Leave that one off.
+
+**Authentication → Sign In / Providers → Google**: enable, paste the Client ID and Client
 secret, save. The callback URL shown on that page must match what you entered in
 step 3.1 above.
 
