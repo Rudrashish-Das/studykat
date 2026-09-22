@@ -530,20 +530,15 @@ const SHAPES: Record<string, (p: ShapeProps) => ReactNode> = {
   },
 
   armchair: ({ mat }) => (
+    // A one-seat sofa: a tall back across the far edge, a padded arm down each
+    // side and a plump cushion between them, drawn far-to-near like the sofa.
+    // Stacking inset boxes on a base left the arms floating on a plinth.
     <>
-      <Box z={14} mat={mat} inset={0.2} />
-      <Box z={10} lift={14} mat={{ ...mat, top: mat.accent }} inset={0.45} />
-      {/* Back slab at one edge... */}
-      <g transform={`translate(${-HX * 0.3}, ${-HY * 0.3})`}>
-        <Box z={30} lift={14} mat={mat} insetW={0.8} insetH={0.24} />
-      </g>
-      {/* ...and an arm down each side, which is the whole difference between
-          this and `chair`. Both need an asymmetric inset to come out as slabs. */}
-      {[-0.28, 0.28].map((d) => (
-        <g key={d} transform={`translate(${-d * HX}, ${d * HY})`}>
-          <Box z={13} lift={14} mat={mat} insetW={0.26} insetH={0.8} />
-        </g>
-      ))}
+      <Slab x0={0.1} x1={0.9} y0={0.1} y1={0.28} z0={0} z1={40} mat={mat} r={6} />
+      <Slab x0={0.1} x1={0.26} y0={0.28} y1={0.9} z0={0} z1={22} mat={mat} r={5} />
+      <Slab x0={0.26} x1={0.74} y0={0.28} y1={0.88} z0={0} z1={10} mat={mat} />
+      <Slab x0={0.27} x1={0.73} y0={0.28} y1={0.88} z0={10} z1={18} mat={mat} r={6} />
+      <Slab x0={0.74} x1={0.9} y0={0.28} y1={0.9} z0={0} z1={22} mat={mat} r={5} />
     </>
   ),
 
