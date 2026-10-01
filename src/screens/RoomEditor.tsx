@@ -59,7 +59,9 @@ export function RoomEditor() {
   /** Everything owned but not currently in the room. Surfaces have their own picker. */
   const stored = useMemo(() => {
     const placedIds = new Set(placed.map((p) => p.item_id))
-    return owned.filter((item) => !isSurface(item) && !placedIds.has(item.id))
+    return owned.filter(
+      (item) => !isSurface(item) && item.category !== 'upgrade' && !placedIds.has(item.id),
+    )
   }, [placed, owned])
 
   /** Owned floors, walls and washes, by category, with the one on show. */

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Cat } from '@/components/cat/Cat'
 import { Button } from '@/components/ui/Button'
@@ -13,6 +13,7 @@ import {
   usePauseSession,
   useResumeSession,
   useSubjects,
+  useSyncSession,
   useToday,
 } from '@/lib/queries/sessions'
 import { COIN_RULES, computeCoins } from '@/lib/economy/coins'
@@ -20,6 +21,14 @@ import { focusedSeconds, formatDuration, isPaused, useTicker, useTimerStore } fr
 import { paths } from '@/lib/paths'
 import { usePrefersReducedMotion } from '@/lib/useReducedMotion'
 import { setLastResult } from '@/lib/lastResult'
+import { chimeFor, pendingSync, pomodoroState, type PomodoroPhase, type PomodoroState } from '@/lib/pomodoro'
+import { playChime } from '@/lib/sound'
+
+const PHASE_LABEL: Record<PomodoroPhase, string> = {
+  focus: 'Focus',
+  shortBreak: 'Short break',
+  longBreak: 'Long break',
+}
 
 /**
  * Focus mode. While a session runs the screen belongs to the timer: dimmed
@@ -32,7 +41,7 @@ import { setLastResult } from '@/lib/lastResult'
 export function Focus() {
   const navigate = useNavigate()
   const { data: profile } = useProfile()
-  const session = useActiveSession()
+  const session = useActiveSession({ poll: true })
   const today = useToday()
   const subjects = useSubjects()
   const reducedMotion = usePrefersReducedMotion()
@@ -42,13 +51,54 @@ export function Focus() {
   const resumeSession = useResumeSession()
   const abandonSession = useAbandonSession()
 
+  const syncSession = useSyncSession()
+
   const [confirmStop, setConfirmStop] = useState(false)
 
   const now = useTimerStore((s) => s.now)
   const paused = session.data ? isPaused(session.data) : false
-  useTicker(Boolean(session.data) && !paused)
+  // Pomodoro runs as the session was started, whatever the settings say now.
+  const pomodoro = Boolean(session.data?.pomodoro)
+  // A break still needs ticking: its countdown runs while the clock is paused.
+  useTicker(Boolean(session.data) && (!paused || pomodoro))
 
   const appearance = useCatAppearance(profile)
+
+  // Worked out from the server's row the same way the server does, so the
+  // screen is right between calls and every device shows the same thing.
+  const pomo = session.data ? pomodoroState(session.data, now) : null
+  const onBreak = pomo !== null && pomo.phase !== 'focus'
+
+  // A block or a break has ended and the server has not written it in yet:
+  // ask it to. Once per change, from whichever device notices first.
+  const asked = useRef<string | null>(null)
+  const due = session.data ? pendingSync(session.data, now) : null
+  const sessionId = session.data?.id
+  const busy = syncSession.isPending || pauseSession.isPending || resumeSession.isPending
+  useEffect(() => {
+    if (!due || !sessionId || busy || endSession.isPending || asked.current === due) return
+    asked.current = due
+    syncSession.mutate(sessionId)
+  }, [due, sessionId, busy, endSession.isPending, syncSession])
+
+  // Chime as the phase changes under this screen — not for what changed while
+  // it was closed.
+  const lastPhase = useRef<PomodoroState | null>(null)
+  useEffect(() => {
+    const chime = chimeFor(lastPhase.current, pomo, now)
+    lastPhase.current = pomo
+    if (chime) playChime(undefined, { soft: chime === 'soft' })
+  }, [pomo, now])
+
+  // The countdown in the tab title, for glancing at from another tab.
+  useEffect(() => {
+    if (!pomo) return
+    const before = document.title
+    document.title = `${formatDuration(Math.max(pomo.remainingSeconds, 0))} · ${PHASE_LABEL[pomo.phase]}`
+    return () => {
+      document.title = before
+    }
+  })
 
   // No session — someone navigated here directly, or it was just ended. Not
   // while a refetch is still out, though: that answer may be about to change.
@@ -71,7 +121,8 @@ export function Focus() {
   const activeSession = session.data
   const subjectId = activeSession.subject_id
   const subject = subjects.data?.find((s) => s.id === subjectId)
-  const seconds = focusedSeconds(activeSession, now)
+  // With Pomodoro, breaks the server has yet to write in already count as paused.
+  const seconds = pomo ? pomo.focusedSeconds : focusedSeconds(activeSession, now)
   const belowFloor = seconds < COIN_RULES.minSeconds
 
   // An honest preview, computed with the same rules the server will apply.
@@ -95,12 +146,24 @@ export function Focus() {
     <div className="flex min-h-full flex-col items-center justify-center bg-night px-5 py-10 text-moon">
       <div className="w-full max-w-sm text-center">
         <div className="mx-auto w-40 opacity-95 sm:w-48">
-          <Cat appearance={appearance} pose="studying" animate={!reducedMotion} />
+          <Cat appearance={appearance} pose={onBreak ? 'idle' : 'studying'} animate={!reducedMotion} />
         </div>
 
-        <p className="mt-6 font-mono text-6xl font-bold tabular-nums sm:text-7xl" aria-live="off">
-          {formatDuration(seconds)}
+        {pomo && (
+          <p className="mt-6 text-sm font-bold uppercase tracking-wider text-moon/70">
+            {PHASE_LABEL[pomo.phase]}
+            {pomo.phase === 'focus' && ` · block ${pomo.block}`}
+          </p>
+        )}
+        <p
+          className={`${pomo ? 'mt-1' : 'mt-6'} font-mono text-6xl font-bold tabular-nums sm:text-7xl`}
+          aria-live="off"
+        >
+          {formatDuration(pomo ? Math.max(pomo.remainingSeconds, 0) : seconds)}
         </p>
+        {pomo && (
+          <p className="mt-1 text-sm text-moon/60">{formatDuration(seconds)} focused in total</p>
+        )}
         {/* A polite, low-frequency announcement for screen readers, rather than
             one per second. */}
         <p className="sr-only" aria-live="polite">
@@ -122,7 +185,13 @@ export function Focus() {
         )}
 
         <p className="mt-4 text-sm text-moon/60">
-          {paused ? (
+          {onBreak ? (
+            pomo.remainingSeconds > 0 ? (
+              'Stretch, get some water. The clock is stopped until the break ends.'
+            ) : (
+              'Break over. Resume when you are ready.'
+            )
+          ) : paused ? (
             'Paused. The clock is stopped.'
           ) : belowFloor ? (
             <>Under five minutes earns nothing — {5 - Math.floor(seconds / 60)} to go.</>
@@ -150,7 +219,7 @@ export function Focus() {
               else pauseSession.mutate(activeSession.id)
             }}
           >
-            {paused ? 'Resume' : 'Pause'}
+            {onBreak && pomo.remainingSeconds > 0 ? 'Skip break' : paused ? 'Resume' : 'Pause'}
           </Button>
           <Button
             size="lg"

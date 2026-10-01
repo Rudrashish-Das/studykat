@@ -795,8 +795,140 @@ begin
   assert v_blocked, 'the client could add a treat to the menu';
 end $$;
 
+-- An upgrade is bought like anything else, but it unlocks a setting rather
+-- than turning up in the room.
+do $$
+declare
+  v_user    uuid := '11111111-1111-1111-1111-111111111111';
+  v_upgrade uuid;
+  v_blocked boolean := false;
+begin
+  perform tst.as_superuser();
+  perform tst.set_coins(v_user, 1000);
+  select id into v_upgrade from public.catalog_items where slug = 'upgrade-chimes';
+  assert v_upgrade is not null, 'the Chime pack upgrade is missing from the catalog';
+
+  perform tst.become(v_user);
+  perform public.purchase_item(v_upgrade);
+  assert exists (select 1 from public.inventory where user_id = v_user and item_id = v_upgrade),
+    'buying an upgrade did not add it to the inventory';
+
+  begin
+    insert into public.room_layout (user_id, item_id, grid_x, grid_y) values (v_user, v_upgrade, 6, 6);
+  exception when check_violation then v_blocked := true;
+  end;
+  assert v_blocked, 'an upgrade was placed in the room';
+  perform tst.as_superuser();
+end $$;
+
+-- =============================================================== pomodoro ==
+-- The breaks are the server's. A client that never pauses for one, or that
+-- was closed the whole time, ends with exactly the pauses and pay of one that
+-- watched every second.
+
+do $$
+declare
+  v_user    uuid := '11111111-1111-1111-1111-111111111111';
+  v_s       public.study_sessions;
+  v_result  jsonb;
+  v_blocked boolean := false;
+  v_break   jsonb;
+begin
+  perform tst.become(v_user);
+
+  -- Settings are checked by the database, not just the form.
+  begin
+    update public.profiles set focus_minutes = 500 where id = v_user;
+  exception when check_violation then v_blocked := true;
+  end;
+  assert v_blocked, 'a 500-minute focus block was accepted';
+
+  -- A stopwatch session carries no Pomodoro and is never given breaks.
+  perform tst.clear_sessions(v_user);
+  update public.profiles set timer_mode = 'stopwatch' where id = v_user;
+  v_s := public.start_session(null, null);
+  assert v_s.pomodoro is null, 'a stopwatch session was given Pomodoro settings';
+  perform tst.backdate_session(v_s.id, interval '40 minutes');
+  v_s := public.sync_session(v_s.id);
+  assert jsonb_array_length(v_s.pauses) = 0, 'a stopwatch session was given a break';
+  perform public.abandon_session(v_s.id);
+
+  -- Pomodoro: the settings are copied at the start and frozen there.
+  update public.profiles
+     set timer_mode = 'pomodoro', focus_minutes = 25, short_break_minutes = 5,
+         long_break_minutes = 15, long_break_every = 4, auto_resume = false
+   where id = v_user;
+  v_s := public.start_session(null, null);
+  assert (v_s.pomodoro ->> 'focus_minutes')::int = 25, 'the session did not copy the focus length';
+  update public.profiles set focus_minutes = 50 where id = v_user;
+  select * into v_s from public.study_sessions where id = v_s.id;
+  assert (v_s.pomodoro ->> 'focus_minutes')::int = 25,
+    'changing settings reshaped a session already running';
+
+  -- Forty minutes with no client watching: the break starts at exactly 25
+  -- and is still open, so only 25 minutes are focused.
+  perform tst.backdate_session(v_s.id, interval '40 minutes');
+  v_s := public.sync_session(v_s.id);
+  assert jsonb_array_length(v_s.pauses) = 1, 'the due break was not written in';
+  v_break := v_s.pauses -> 0;
+  assert v_break ->> 'reason' = 'break', 'the server break was not tagged as one';
+  assert v_break ->> 'until' is null, 'a break that should still be open was closed';
+  assert abs(extract(epoch from ((v_break ->> 'at')::timestamptz - (v_s.started_at + interval '25 minutes')))) < 1,
+    'the break did not start where the focus block ended';
+
+  -- Syncing again changes nothing.
+  assert (public.sync_session(v_s.id)).pauses = v_s.pauses, 'sync_session is not idempotent';
+
+  -- Pausing during a break leaves the break alone.
+  v_s := public.pause_session(v_s.id);
+  assert jsonb_array_length(v_s.pauses) = 1, 'pausing during a break added a second pause';
+
+  v_result := public.end_session(v_s.id, 40 * 60);
+  assert abs((v_result ->> 'focused_seconds')::int - 25 * 60) <= 1,
+    format('break time was paid: %s focused seconds', v_result ->> 'focused_seconds');
+
+  -- Carrying on by itself, with a long break every second block. 75 minutes:
+  -- focus 0–25, short break 25–30, focus 30–55, long break 55–70, focus 70–75.
+  perform tst.clear_sessions(v_user);
+  update public.profiles
+     set focus_minutes = 25, long_break_every = 2, auto_resume = true
+   where id = v_user;
+  v_s := public.start_session(null, null);
+  perform tst.backdate_session(v_s.id, interval '75 minutes');
+
+  -- A manual pause first settles everything due, then adds itself.
+  v_s := public.pause_session(v_s.id);
+  assert jsonb_array_length(v_s.pauses) = 3,
+    format('expected two breaks and a pause, got %s', v_s.pauses);
+  assert v_s.pauses -> 0 ->> 'until' is not null and v_s.pauses -> 1 ->> 'until' is not null,
+    'an auto-resuming break was left open';
+  assert abs(extract(epoch from ((v_s.pauses -> 1 ->> 'until')::timestamptz
+                                - (v_s.pauses -> 1 ->> 'at')::timestamptz)) - 15 * 60) < 1,
+    'the second break was not the long one';
+  assert v_s.pauses -> 2 ->> 'reason' = 'manual', 'the Pause button was not tagged as manual';
+
+  v_result := public.end_session(v_s.id, null);
+  assert abs((v_result ->> 'focused_seconds')::int - 55 * 60) <= 1,
+    format('expected 55 focused minutes, got %s seconds', v_result ->> 'focused_seconds');
+
+  -- The unsettled payout is not reachable from a client.
+  v_blocked := false;
+  begin
+    perform public.end_session_settled(gen_random_uuid(), null);
+  exception when insufficient_privilege then v_blocked := true;
+  end;
+  assert v_blocked, 'a client could end a session without settling its breaks';
+
+  update public.profiles
+     set timer_mode = 'stopwatch', focus_minutes = 25, long_break_every = 4, auto_resume = false
+   where id = v_user;
+  perform tst.clear_sessions(v_user);
+  perform tst.as_superuser();
+end $$;
+
 rollback;
 
 \echo ''
 \echo '  All assertions passed.'
 \echo ''
+

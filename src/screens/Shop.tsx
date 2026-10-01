@@ -17,6 +17,20 @@ import {
 } from '@/lib/queries/room'
 import type { CatalogItem, ItemCategory } from '@/lib/supabase/types'
 import { cn } from '@/lib/cn'
+import { UpgradeIcon } from '@/components/shop/UpgradeIcon'
+import { upgradeKey, type Upgrade } from '@/lib/preferences'
+import { playChime, playItemSound, playMeow, playPurr } from '@/lib/sound'
+
+/** A taste of what a sound upgrade buys, played whatever the settings say. */
+const PREVIEWS: Partial<Record<Upgrade, () => void>> = {
+  chimes: () => playChime('chime', { force: true }),
+  'meow-alarm': () => playChime('meow', { force: true }),
+  'cat-voice': () => {
+    playMeow(true)
+    window.setTimeout(() => playPurr(true), 800)
+  },
+  'room-sounds': () => playItemSound('plink', true),
+}
 
 const CATEGORY_LABELS: Record<ItemCategory, string> = {
   furniture: 'Furniture',
@@ -28,6 +42,7 @@ const CATEGORY_LABELS: Record<ItemCategory, string> = {
   floor: 'Flooring',
   wall: 'Walls',
   wallcolor: 'Wall colour',
+  upgrade: 'Upgrades',
 }
 
 const ORDER: ItemCategory[] = [
@@ -40,6 +55,7 @@ const ORDER: ItemCategory[] = [
   'floor',
   'wall',
   'wallcolor',
+  'upgrade',
 ]
 
 export function Shop() {
@@ -158,22 +174,44 @@ function ShopCard({
   onBuy: () => void
 }) {
   const lockNote = describeUnlock(item)
+  const upgrade = upgradeKey(item.art_key)
+  const preview = upgrade ? PREVIEWS[upgrade] : undefined
 
   return (
     <li className="flex flex-col rounded-cozy border border-ink-line/70 bg-paper p-4 shadow-cozy">
       {/* A real preview, drawn with the same renderer the room uses. */}
       <div className="grid h-28 place-items-center rounded-xl bg-cream-100">
-        <FurniturePreview
-          artKey={item.art_key}
-          footprintW={item.footprint_w}
-          footprintH={item.footprint_h}
-          className="h-full w-full"
-          opacity={unlocked ? 1 : 0.45}
-        />
+        {upgrade ? (
+          <UpgradeIcon
+            upgrade={upgrade}
+            className={cn('h-16 w-16 text-wood-deep', !unlocked && 'opacity-50')}
+          />
+        ) : (
+          <FurniturePreview
+            artKey={item.art_key}
+            footprintW={item.footprint_w}
+            footprintH={item.footprint_h}
+            className="h-full w-full"
+            opacity={unlocked ? 1 : 0.45}
+          />
+        )}
       </div>
 
       <h2 className="mt-3 text-base">{item.name}</h2>
       {item.description && <p className="mt-1 text-sm text-ink-soft">{item.description}</p>}
+      {upgrade && (
+        <p className="mt-2 text-xs text-ink-faint">
+          {preview && (
+            <>
+              <button type="button" onClick={preview} className="font-bold text-teal-dark underline">
+                Listen
+              </button>
+              {' · '}
+            </>
+          )}
+          {owned ? 'Turn it on in Settings.' : 'Set up in Settings once bought.'}
+        </p>
+      )}
 
       <div className="mt-auto flex items-center justify-between gap-3 pt-4">
         <span className="flex items-center gap-1.5 text-sm font-extrabold tabular-nums">

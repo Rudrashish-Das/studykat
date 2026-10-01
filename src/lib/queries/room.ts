@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { requireSupabase } from '@/lib/supabase/client'
 import { useAuth, useUserId } from '@/lib/useAuth'
 import { keys as sessionKeys } from './sessions'
 import type { CatalogItem, InventoryRow, RoomLayoutRow } from '@/lib/supabase/types'
 import type { PlacedItem } from '@/components/room/Room'
+import { setOwnedUpgrades, upgradeKey, type Upgrade } from '@/lib/preferences'
 
 export const roomKeys = {
   catalog: ['catalog'] as const,
@@ -40,6 +41,29 @@ export function useInventory() {
       return (data ?? [])
     },
   })
+}
+
+/**
+ * Tells the preferences store which upgrades this account owns, so locked
+ * settings fall back to their free versions. Mounted around every signed-in
+ * screen; safe to call again anywhere that needs to know whether that is
+ * settled yet. A new sign-in's inventory replaces the last one's.
+ */
+export function useSyncUpgrades(): { isPending: boolean } {
+  const catalog = useCatalog()
+  const inventory = useInventory()
+
+  useEffect(() => {
+    const byId = new Map((catalog.data ?? []).map((item) => [item.id, item]))
+    const owned = new Set<Upgrade>()
+    for (const row of inventory.data ?? []) {
+      const key = upgradeKey(byId.get(row.item_id)?.art_key ?? '')
+      if (key) owned.add(key)
+    }
+    setOwnedUpgrades(owned)
+  }, [catalog.data, inventory.data])
+
+  return { isPending: catalog.isPending || inventory.isPending }
 }
 
 export function useRoomLayout() {

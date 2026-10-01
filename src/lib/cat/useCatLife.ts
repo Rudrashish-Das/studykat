@@ -4,6 +4,7 @@ import type { PlacedItem } from '@/components/room/Room'
 import { blockedCells, cellKey, findPath, pickWanderTarget } from '@/lib/iso/path'
 import type { GridPoint } from '@/lib/iso/projection'
 import { usePrefersReducedMotion } from '@/lib/useReducedMotion'
+import type { ItemSound } from '@/lib/sound'
 import {
   approach,
   bedtimeSpot,
@@ -12,6 +13,7 @@ import {
   interactionFor,
   isInteractable,
   petLine,
+  soundFor,
   type Interaction,
 } from './interactions'
 
@@ -60,6 +62,8 @@ export interface CatLifeView {
   perch: { itemId: string; lift: number } | null
   /** The item being played with, so it can move too. */
   activeItem: { id: string; motion: Interaction['motion'] } | null
+  /** The item the cat is busy with and the noise that makes, if it makes one. */
+  itemSound: { itemId: string; sound: ItemSound } | null
   effect: 'hearts' | 'zzz' | null
   pats: number
   meal: CatLife['meal']
@@ -376,6 +380,7 @@ function describe(
   feed: (meal: Meal) => void,
 ): CatLifeView {
   const base = {
+    itemSound: null,
     tile: life.tile,
     facing: life.facing,
     pats: life.pats,
@@ -419,8 +424,10 @@ function describe(
     case 'interacting': {
       const { interaction, itemId } = life.activity
       const t = thing(itemId) ?? 'thing'
+      const sound = soundFor(interaction)
       return {
         ...base,
+        itemSound: sound ? { itemId, sound } : null,
         pose: interaction.pose,
         perch: perchOf(life.activity),
         activeItem: interaction.motion ? { id: itemId, motion: interaction.motion } : null,

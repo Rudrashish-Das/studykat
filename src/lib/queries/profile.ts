@@ -28,7 +28,18 @@ export function useProfile() {
 export type ProfilePatch = Partial<
   Pick<
     Profile,
-    'cat_name' | 'cat_variant' | 'daily_goal_minutes' | 'timezone' | 'display_name' | 'onboarded_at'
+    | 'cat_name'
+    | 'cat_variant'
+    | 'daily_goal_minutes'
+    | 'timezone'
+    | 'display_name'
+    | 'onboarded_at'
+    | 'timer_mode'
+    | 'focus_minutes'
+    | 'short_break_minutes'
+    | 'long_break_minutes'
+    | 'long_break_every'
+    | 'auto_resume'
   >
 >
 
