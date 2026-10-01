@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/useAuth'
 import { useProfile } from '@/lib/queries/profile'
+import { useSyncUpgrades } from '@/lib/queries/room'
 import { isSupabaseConfigured } from '@/lib/env'
 import { paths } from '@/lib/paths'
 import { FullScreenSpinner } from '@/components/ui/Spinner'
@@ -25,6 +26,8 @@ export function RequireAuth() {
  */
 export function RequireOnboarded() {
   const { data: profile, isPending, isError } = useProfile()
+  // Settings, Focus mode and the sounds all need to know what has been bought.
+  useSyncUpgrades()
 
   if (isPending) return <FullScreenSpinner label="Waking the cat" />
   // A missing profile row means the signup trigger has not caught up yet.

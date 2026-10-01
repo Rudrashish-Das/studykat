@@ -1,4 +1,5 @@
 import type { CatPose } from '@/components/cat/Cat'
+import type { ItemSound } from '@/lib/sound'
 import { parseArtKey } from '@/components/room/materials'
 import { cellKey, findPath } from '@/lib/iso/path'
 import {
@@ -36,6 +37,8 @@ export interface Interaction {
   duration: [number, number]
   /** Completes "Miso …" — `thing` is the item's name in lower case. */
   describe: (thing: string) => string
+  /** What it sounds like, when that is not just what its motion implies. */
+  sound?: ItemSound
 }
 
 const PLAY: [number, number] = [6000, 10000]
@@ -135,6 +138,7 @@ const BY_SHAPE: Record<string, Interaction> = {
     weight: 4,
     duration: PLAY,
     describe: (t) => `is sharpening their claws on the ${t}.`,
+    sound: 'scratch',
   },
   catbed: nap(4, (t) => `is curled up in the ${t}.`, 4),
   cattree: { ...perch(56, (t) => `is surveying the room from the top of the ${t}.`), weight: 4 },
@@ -159,8 +163,8 @@ const BY_SHAPE: Record<string, Interaction> = {
   desk: perch(49, (t) => `is sitting on the ${t}, right on the open book.`),
   bookcase: perch(66, (t) => `is looking down from the top of the ${t}.`),
   wardrobe: perch(78, (t) => `has somehow got on top of the ${t}.`),
-  piano: sniff((t) => `is pawing at the ${t}. Plink.`, 'shake'),
-  grandfather: watch((t) => `is watching the ${t} tick.`),
+  piano: { ...sniff((t) => `is pawing at the ${t}. Plink.`, 'shake'), sound: 'plink' },
+  grandfather: { ...watch((t) => `is watching the ${t} tick.`), sound: 'tick' },
 
   // Plants: sniffed, and sometimes regretted.
   succulent: sniff(undefined, 'rustle'),
@@ -222,6 +226,22 @@ export function interactionFor(item: InteractableItem['item']): Interaction {
   if (known) return known
   if (item.layer === WALL_LAYER) return watch()
   return BY_CATEGORY[item.category] ?? sniff()
+}
+
+const SOUND_FOR_MOTION: Record<NonNullable<ItemMotion>, ItemSound> = {
+  roll: 'roll',
+  sway: 'jingle',
+  shake: 'rattle',
+  rustle: 'rustle',
+  slither: 'slither',
+  tackle: 'thump',
+}
+
+/** The noise an interaction makes, if any; a nap or a stare is quiet. */
+export function soundFor(interaction: Interaction): ItemSound | null {
+  if (interaction.sound) return interaction.sound
+  if (interaction.pose === 'sleeping') return null
+  return interaction.motion ? SOUND_FOR_MOTION[interaction.motion] : null
 }
 
 /** "Ball of yarn" → "ball of yarn", for use mid-sentence. */

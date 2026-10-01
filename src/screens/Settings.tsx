@@ -13,6 +13,7 @@ import { signOut } from '@/lib/auth-actions'
 import { requireSupabase } from '@/lib/supabase/client'
 import { paths } from '@/lib/paths'
 import { TimeZoneSelect } from '@/components/ui/TimeZoneSelect'
+import { TimerSoundSettings } from '@/components/settings/TimerSoundSettings'
 import { setThemePreference, useThemePreference, type ThemePreference } from '@/lib/theme'
 import { cn } from '@/lib/cn'
 import {
@@ -37,17 +38,6 @@ function friendlyProfileError(raw: string, timezone: string): string {
   return raw
 }
 
-/** Sound is a UI preference, so localStorage is the right home for it. */
-const SOUND_KEY = 'studykat:sound'
-
-function readSound(): boolean {
-  try {
-    return localStorage.getItem(SOUND_KEY) !== 'off'
-  } catch {
-    return true
-  }
-}
-
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
@@ -63,18 +53,21 @@ export function Settings() {
   const [catName, setCatName] = useState('')
   const [goal, setGoal] = useState(60)
   const [timezone, setTimezone] = useState('UTC')
-  const [sound, setSound] = useState(readSound)
   const theme = useThemePreference()
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState('')
 
+  // Only when these change on the server: the timer card saves to the profile
+  // too, and that must not wipe a name typed here but not yet saved.
+  const savedName = profile?.cat_name
+  const savedGoal = profile?.daily_goal_minutes
+  const savedTimezone = profile?.timezone
   useEffect(() => {
-    if (!profile) return
-    setCatName(profile.cat_name)
-    setGoal(profile.daily_goal_minutes)
-    setTimezone(profile.timezone)
-  }, [profile])
+    if (savedName !== undefined) setCatName(savedName)
+    if (savedGoal !== undefined) setGoal(savedGoal)
+    if (savedTimezone !== undefined) setTimezone(savedTimezone)
+  }, [savedName, savedGoal, savedTimezone])
 
   if (isPending || !profile) return <FullScreenSpinner label="Fetching your settings" />
 
@@ -190,47 +183,19 @@ export function Settings() {
       </Card>
 
       {/* Device preferences apply the moment they change, so they get their own
-          card rather than sitting above a Save button that does not touch them. */}
+          cards rather than sitting above a Save button that does not touch them. */}
+      <TimerSoundSettings />
+
       <Card className="mt-5 space-y-5">
         <div>
-          <h2 className="text-lg">Preferences</h2>
+          <h2 className="text-lg">Appearance</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Saved on this device as soon as you change them.
+            Saved on this device as soon as you change it.
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold">Sound</p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={sound}
-            aria-label="Sound"
-            onClick={() => {
-              const next = !sound
-              setSound(next)
-              try {
-                localStorage.setItem(SOUND_KEY, next ? 'on' : 'off')
-              } catch {
-                /* private mode; the toggle simply will not persist */
-              }
-            }}
-            className={`relative h-7 w-12 shrink-0 rounded-pill transition-colors duration-cozy ease-cozy ${
-              sound ? 'bg-sage-dark' : 'bg-ink-line'
-            }`}
-          >
-            <span
-              className={`absolute top-1 h-5 w-5 rounded-full bg-paper shadow transition-[left] duration-cozy ease-cozy ${
-                sound ? 'left-6' : 'left-1'
-              }`}
-            />
-          </button>
-        </div>
-
         <fieldset>
-          <legend className="text-sm font-bold">Appearance</legend>
+          <legend className="text-sm font-bold">Theme</legend>
           <div className="mt-2 inline-flex rounded-pill border border-ink-line/70 bg-cream-50 p-1">
             {THEME_OPTIONS.map((option) => (
               <label

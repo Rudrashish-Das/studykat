@@ -17,8 +17,11 @@ export const keys = {
  * The session currently running, if any. Read straight from the table (SELECT
  * is the one thing the client may do here), so reopening a closed tab picks the
  * timer back up exactly where it was.
+ *
+ * `poll` re-reads it every 15 seconds, for Focus mode: a pause, a resume or a
+ * skipped break on another device then shows up here without a reload.
  */
-export function useActiveSession() {
+export function useActiveSession(options?: { poll?: boolean }) {
   const { user } = useAuth()
   return useQuery({
     queryKey: keys.activeSession(user?.id ?? 'anonymous'),
@@ -26,6 +29,7 @@ export function useActiveSession() {
     // Cheap, and the source of truth for whether Focus mode should be showing.
     refetchOnWindowFocus: true,
     staleTime: 5_000,
+    refetchInterval: options?.poll ? 15_000 : false,
     queryFn: async (): Promise<StudySession | null> => {
       const { data, error } = await requireSupabase()
         .from('study_sessions')
@@ -140,6 +144,17 @@ export function useResumeSession() {
     if (error) throw error
     return data
   }, { returnsLiveSession: true })
+}
+
+/** Have the server write in any Pomodoro break that has come due. */
+export function useSyncSession() {
+  return useSessionMutation(async (sessionId: string) => {
+    const { data, error } = await requireSupabase().rpc('sync_session', {
+      p_session_id: sessionId,
+    })
+    if (error) throw error
+    return data
+  }, { returnsLiveSession: true, invalidateToday: false })
 }
 
 export function useAbandonSession() {

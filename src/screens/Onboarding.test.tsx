@@ -25,6 +25,12 @@ const profile: Profile = {
   timezone_changed_at: null,
   onboarded_at: null,
   created_at: '2026-01-01T00:00:00Z',
+  timer_mode: 'stopwatch',
+  focus_minutes: 25,
+  short_break_minutes: 5,
+  long_break_minutes: 15,
+  long_break_every: 4,
+  auto_resume: false,
 }
 
 vi.mock('@/lib/queries/profile', () => ({

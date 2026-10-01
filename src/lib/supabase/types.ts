@@ -24,6 +24,8 @@ export type ItemCategory =
   | 'light'
   | 'wallcolor'
   | 'decor'
+  /** Owned, never placed: unlocks a setting. */
+  | 'upgrade'
 
 /** Shape of `catalog_items.unlock_rule`. `null` means always available. */
 export type UnlockRule =
@@ -31,7 +33,22 @@ export type UnlockRule =
   | { kind: 'lifetime_hours'; hours: number }
   | { kind: 'lifetime_coins'; coins: number }
 
-export type PauseInterval = { at: string; until: string | null }
+/**
+ * A stretch the clock was stopped. `reason` is 'break' for a Pomodoro break
+ * the server wrote in, 'manual' for the Pause button; older pauses have none.
+ */
+export type PauseInterval = { at: string; until: string | null; reason?: 'break' | 'manual' }
+
+export type TimerMode = 'stopwatch' | 'pomodoro'
+
+/** The Pomodoro settings a session was started with, frozen on it. */
+export type PomodoroConfig = {
+  focus_minutes: number
+  short_break_minutes: number
+  long_break_minutes: number
+  long_break_every: number
+  auto_resume: boolean
+}
 
 export type Profile = {
   id: string
@@ -50,6 +67,14 @@ export type Profile = {
   timezone_changed_at: string | null
   onboarded_at: string | null
   created_at: string
+  /** How Focus mode keeps time; synced to every device. */
+  timer_mode: TimerMode
+  focus_minutes: number
+  short_break_minutes: number
+  long_break_minutes: number
+  long_break_every: number
+  /** Start the next focus block by itself when a break runs out. */
+  auto_resume: boolean
 }
 
 export type Subject = {
@@ -74,6 +99,8 @@ export type StudySession = {
   pauses: PauseInterval[]
   /** Optional free-text subject label typed at the start of a session. */
   label: string | null
+  /** Null for a stopwatch session. */
+  pomodoro: PomodoroConfig | null
 }
 
 export type Wallet = {

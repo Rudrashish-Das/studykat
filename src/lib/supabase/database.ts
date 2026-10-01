@@ -53,6 +53,12 @@ type ProfileUpdate = Partial<
     | 'daily_goal_minutes'
     | 'timezone'
     | 'onboarded_at'
+    | 'timer_mode'
+    | 'focus_minutes'
+    | 'short_break_minutes'
+    | 'long_break_minutes'
+    | 'long_break_every'
+    | 'auto_resume'
   >
 >
 
@@ -105,6 +111,7 @@ export type Database = {
       }
       pause_session: { Args: { p_session_id: string }; Returns: StudySession }
       resume_session: { Args: { p_session_id: string }; Returns: StudySession }
+      sync_session: { Args: { p_session_id: string }; Returns: StudySession }
       abandon_session: { Args: { p_session_id: string }; Returns: StudySession }
       purchase_item: {
         Args: { p_item_id: string }

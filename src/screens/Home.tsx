@@ -12,6 +12,7 @@ import { SubjectPicker } from '@/components/session/SubjectPicker'
 import { TreatMenu } from '@/components/cat/TreatMenu'
 import { poseForContext } from '@/lib/cat/pose'
 import { useCatLife } from '@/lib/cat/useCatLife'
+import { useCatSounds } from '@/lib/cat/useCatSounds'
 import { streakNudge } from '@/lib/economy/streak'
 import { paths } from '@/lib/paths'
 import { formatMinutes } from '@/lib/timer'
@@ -65,6 +66,7 @@ export function Home() {
 
   const bedtime = poseForContext({ now, timeZone, sessionActive: false }) === 'sleeping'
   const catLife = useCatLife({ placed, asleep: bedtime, catName: profile?.cat_name ?? 'Your cat' })
+  useCatSounds(catLife)
 
   // `today` also gates the first paint: otherwise the streak notice mounts a
   // moment after the page appears and shoves the studying card down.
