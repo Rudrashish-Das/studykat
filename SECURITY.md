@@ -16,6 +16,61 @@ item.
 
 ---
 
+## Third pass, 2026-10-04
+
+Scope: upgrades (`0015`, `0016`) and the server-run Pomodoro (`0017`), plus a
+re-check of every grant and policy. Nothing high or critical.
+
+**The Pomodoro RPCs are sound.** `sync_session`, `pause_session`,
+`resume_session` and `end_session` all lock the row by `id` *and*
+`user_id = auth.uid()`; `settle_pomodoro` and the renamed `end_session_settled`
+are revoked from clients; the timer settings are range-checked on the profile
+and copied onto the session at start, so changing them cannot reshape a
+session already running. Break pauses only ever reduce paid time.
+
+### Fixed
+
+#### 13. Pomodoro helpers callable while signed out — *low*
+
+`paused_seconds_exact`, `pomodoro_break_seconds` and `pomodoro_settle` kept
+Supabase's default `EXECUTE` for `anon`. They are pure and read no stored
+data, but a signed-out visitor had no reason to make the database loop over a
+payload of their choosing. **Fixed** in `0018_pomodoro_grants.sql`: revoked
+from `anon`, still granted to `authenticated` (matching how 0007 treats
+`paused_seconds` and `compute_coins`).
+
+#### 14. `guard_room_layout_placeable` callable as an RPC — *hygiene*
+
+The trigger function added in 0016 missed the treatment finding 6 gave the
+others. **Revoked** in 0018. Both fixes have assertions in the suite.
+
+#### 15. The goal bonus could be earned with five minutes' study — *low*
+
+`daily_goal_minutes` is client-writable down to 5, and the 30-coin bonus paid
+as soon as the goal was met — six times the rate of studying. **Fixed** in
+`0019_goal_bonus_floor.sql`: the goal still counts as met wherever the user
+sets it, but the bonus also needs a 30-minute day
+(`goal_bonus_threshold_minutes`, mirrored in `coins.ts`), so it never pays
+more than the study did. Asserted in the suite.
+
+### Accepted risks
+
+- **Upgrade sounds are unlocked client-side.** The purchase is enforced by
+  `purchase_item`; what is not enforced is *playing* the sounds. They are
+  synthesized in the browser with Web Audio, so the code for every sound is in
+  the public bundle and anyone willing to edit it can hear them unpaid. No
+  server check can stop code running in the user's own browser. Gating them
+  properly would mean pre-rendering them as files behind an
+  ownership-checked storage policy, which costs far more than a sound effect is
+  worth. Nothing is exposed and no other user is affected.
+
+### Not verifiable from the repository
+
+The dashboard checks from the second pass still stand, and migrations
+0015–0019 need applying to the live project.
+
+---
+
 ## Second pass, 2026-09-22
 
 Scope: everything added since the first audit below — the treats feature

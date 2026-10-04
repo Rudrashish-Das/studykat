@@ -1,5 +1,6 @@
 import {
   computeCoins,
+  goalBonusThresholdMinutes,
   streakMultiplier,
   streakThresholdMinutes,
   clampDailyGoal,
@@ -160,6 +161,18 @@ describe('streakThresholdMinutes', () => {
     [120, 60],
   ])('a %i-minute goal needs %i minutes to count', (goal, expected) => {
     expect(streakThresholdMinutes(goal)).toBe(expected)
+  })
+})
+
+describe('goalBonusThresholdMinutes', () => {
+  it.each([
+    [5, 30], // a tiny goal still needs a 30-minute day for the bonus
+    [29, 30],
+    [30, 30],
+    [60, 60],
+    [480, 480],
+  ])('a %i-minute goal pays its bonus at %i minutes', (goal, expected) => {
+    expect(goalBonusThresholdMinutes(goal)).toBe(expected)
   })
 })
 

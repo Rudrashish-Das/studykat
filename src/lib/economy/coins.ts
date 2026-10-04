@@ -22,6 +22,8 @@ export const COIN_RULES = {
   tierRate: 0.25,
   dailyCap: 400,
   goalBonus: 30,
+  /** The goal bonus also needs this many minutes in the day (0019). */
+  goalBonusMinMinutes: 30,
   streakCapDays: 30,
   streakStep: 0.02,
 } as const
@@ -121,4 +123,12 @@ export function clampDailyGoal(minutes: number): number {
 /** Minutes that make a day count toward the streak: max(15, half the goal). */
 export function streakThresholdMinutes(dailyGoalMinutes: number): number {
   return Math.max(15, Math.ceil(dailyGoalMinutes / 2))
+}
+
+/**
+ * Minutes that earn the goal bonus: the goal, but never under 30, so a tiny
+ * goal cannot pay more than the study did. The goal itself still counts as met.
+ */
+export function goalBonusThresholdMinutes(dailyGoalMinutes: number): number {
+  return Math.max(COIN_RULES.goalBonusMinMinutes, dailyGoalMinutes)
 }
