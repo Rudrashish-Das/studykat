@@ -412,6 +412,33 @@ begin
   assert (v_second ->> 'goal_bonus')::int = 0, 'the goal bonus was paid twice in one day';
 end $$;
 
+-- A tiny goal is met, but its bonus waits for a 30-minute day (0019).
+do $$
+declare
+  v_user   uuid := '11111111-1111-1111-1111-111111111111';
+  v_s      public.study_sessions;
+  v_first  jsonb;
+  v_second jsonb;
+begin
+  perform tst.clear_sessions(v_user);
+  perform tst.set_streak(v_user, 0, null, 0, 0);
+  update public.profiles set daily_goal_minutes = 5 where id = v_user;
+
+  v_s := public.start_session(null, null);
+  perform tst.backdate_session(v_s.id, interval '10 minutes');
+  v_first := public.end_session(v_s.id, null);
+  assert (v_first ->> 'goal_met')::boolean, 'a 5-minute goal was not met by 10 minutes';
+  assert (v_first ->> 'goal_bonus')::int = 0, 'a 5-minute goal paid its bonus after 10 minutes';
+
+  v_s := public.start_session(null, null);
+  perform tst.backdate_session(v_s.id, interval '25 minutes');
+  v_second := public.end_session(v_s.id, null);
+  assert (v_second ->> 'goal_bonus')::int = 30, 'the goal bonus was not paid once the day reached 30 minutes';
+
+  update public.profiles set daily_goal_minutes = 60 where id = v_user;
+  perform tst.clear_sessions(v_user);
+end $$;
+
 -- The daily cap holds across several sessions.
 do $$
 declare
@@ -924,6 +951,30 @@ begin
    where id = v_user;
   perform tst.clear_sessions(v_user);
   perform tst.as_superuser();
+end $$;
+
+-- ==================================================== grants (0018) ==
+-- The Pomodoro arithmetic is for signed-in users only, and the room's
+-- placeable guard is a trigger, not an RPC.
+do $$
+declare
+  f text;
+begin
+  foreach f in array array[
+    'public.paused_seconds_exact(jsonb, timestamptz)',
+    'public.pomodoro_break_seconds(jsonb, int)',
+    'public.pomodoro_settle(timestamptz, jsonb, jsonb, timestamptz)'
+  ] loop
+    assert not has_function_privilege('anon', f, 'execute'),
+      format('%s is callable while signed out', f);
+    assert has_function_privilege('authenticated', f, 'execute'),
+      format('%s is no longer callable by a signed-in user', f);
+  end loop;
+
+  assert not has_function_privilege('anon', 'public.guard_room_layout_placeable()', 'execute'),
+    'guard_room_layout_placeable is callable while signed out';
+  assert not has_function_privilege('authenticated', 'public.guard_room_layout_placeable()', 'execute'),
+    'guard_room_layout_placeable is still callable by the client';
 end $$;
 
 rollback;
